@@ -26,6 +26,9 @@ PlasmoidItem {
     readonly property bool horizontal : plasmoid.formFactor == PlasmaCore.Types.Horizontal
     property bool dragging : false
 
+    readonly property bool onTopOrBottomPanel: horizontal && (plasmoid.location == PlasmaCore.Types.TopEdge || plasmoid.location == PlasmaCore.Types.BottomEdge)
+    readonly property bool onLeftOrRightPanel: vertical && (plasmoid.location == PlasmaCore.Types.LeftEdge || plasmoid.location == PlasmaCore.Types.RightEdge)
+
     Layout.minimumWidth: LayoutManager.minimumWidth()
     Layout.minimumHeight: LayoutManager.minimumHeight()
     Layout.preferredWidth: LayoutManager.preferredWidth()
@@ -156,11 +159,47 @@ PlasmoidItem {
             type: PlasmaCore.Dialog.PopupMenu
             flags: Qt.WindowStaysOnTopHint
             hideOnWindowDeactivate: true
-            location: plasmoid.location
-            visualParent: vertical ? popupArrow : root
 
-            mainItem: Popup {
-                Keys.onEscapePressed: popup.visible = false
+            // Manual positioning is required to apply a pixel offset.
+            // The 'location' and 'visualParent' properties do not support this.
+            x: {
+                if (root.onLeftOrRightPanel) {
+                    if (plasmoid.location == PlasmaCore.Types.LeftEdge) {
+                        // Position right of the panel, with a 10px margin
+                        return root.mapToGlobal(root.width, 0).x + 10;
+                    } else { // RightEdge
+                        // Position left of the panel, with a 10px margin
+                        return root.mapToGlobal(0, 0).x - popup.width - 10;
+                    }
+                }
+                // Default for top/bottom panels
+                return root.mapToGlobal(0, 0).x;
+            }
+            y: {
+                if (root.onTopOrBottomPanel) {
+                    if (plasmoid.location == PlasmaCore.Types.TopEdge) {
+                        // Position below the panel, accounting for panel height and margin
+                        return root.mapToGlobal(0, root.height).y + plasmoid.configuration.popupVerticalOffset + 10;
+                    } else { // BottomEdge
+                        // Position above the panel, accounting for panel height, popup height and margin
+                        return root.mapToGlobal(0, 0).y - popup.height - plasmoid.configuration.popupVerticalOffset - 10;
+                    }
+                }
+
+                // Default behavior for vertical panels or desktop
+                return root.mapToGlobal(0, vertical ? (popupArrow.y - height) : 0).y;
+            }
+
+            mainItem: Item {
+                id: popupContainer
+                width: popupContent.width
+                height: popupContent.height
+
+                Popup {
+                    id: popupContent
+                    anchors.centerIn: parent
+                    Keys.onEscapePressed: popup.visible = false
+                }
             }
         }
 

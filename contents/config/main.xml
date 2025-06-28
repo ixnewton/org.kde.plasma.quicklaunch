@@ -24,6 +24,9 @@
     <entry name="popupUrls" type="StringList">
       <default></default>
     </entry>
+    <entry name="popupVerticalOffset" type="Int">
+      <default>8</default>
+    </entry>
   </group>
 
 </kcfg>
