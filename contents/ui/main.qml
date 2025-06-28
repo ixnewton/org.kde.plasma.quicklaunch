@@ -173,7 +173,19 @@ PlasmoidItem {
                     }
                 }
                 // Default for top/bottom panels
-                return root.mapToGlobal(0, 0).x;
+                // If the popup is on the left of the panel and no greater than the width of the popup, position it 8px from the edge of the screen. 
+                // If the popup is on the right of the panel and no greater than the width of the popup from the right edge of the screen, position it 8px from the right edge of the screen. 
+                // Else position it centered on the popupArrow.
+                var arrowGlobalX = root.mapToGlobal(popupArrow.x, 0).x;
+                var centeredX = arrowGlobalX + (popupArrow.width / 2) - (popup.width / 2);
+
+                if (centeredX < 8) {
+                    return 8;
+                } else if (centeredX + popup.width > plasmoid.screenGeometry.width - 8) {
+                    return plasmoid.screenGeometry.width - popup.width - 8;
+                } else {
+                    return centeredX;
+                }
             }
             y: {
                 if (root.onTopOrBottomPanel) {
