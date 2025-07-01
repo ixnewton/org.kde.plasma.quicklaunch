@@ -25,6 +25,10 @@ PlasmoidItem {
     readonly property bool vertical : plasmoid.formFactor == PlasmaCore.Types.Vertical || (plasmoid.formFactor == PlasmaCore.Types.Planar && height > width)
     readonly property bool horizontal : plasmoid.formFactor == PlasmaCore.Types.Horizontal
     property bool dragging : false
+    property bool internalDragInProgress: false
+    property var draggedQuicklink: null
+    property int draggedQuicklinkOriginalIndex: -1
+    property var draggedQuicklinkSourceModel: null
 
     readonly property bool onTopOrBottomPanel: horizontal && (plasmoid.location == PlasmaCore.Types.TopEdge || plasmoid.location == PlasmaCore.Types.BottomEdge)
     readonly property bool onLeftOrRightPanel: vertical && (plasmoid.location == PlasmaCore.Types.LeftEdge || plasmoid.location == PlasmaCore.Types.RightEdge)
@@ -46,41 +50,141 @@ PlasmoidItem {
             enabled: !plasmoid.immutable
 
             onDragEnter: {
-                if (event.mimeData.hasUrls) {
+                internalDragInProgress = event.mimeData.hasFormat("text/x-quicklaunch-internal-move");
+
+                if (internalDragInProgress) {
+                    var data = JSON.parse(event.mimeData.getData("text/x-quicklaunch-internal-move"));
+                    draggedQuicklinkOriginalIndex = data.itemIndex;
+                    
+                    // Determine source model (popup or main launcher)
+                    var isFromPopup = popup.visible && popup.mainItem && popup.mainItem.popupModel;
+                    draggedQuicklinkSourceModel = isFromPopup ? popup.mainItem.popupModel : launcherModel;
+                    
+                    var urls = draggedQuicklinkSourceModel.urls();
+                    draggedQuicklink = urls[draggedQuicklinkOriginalIndex];
+                    // Just note the original position - don't modify array yet
+                }
+
+                if (internalDragInProgress || event.mimeData.hasUrls || root.childAt(event.x, event.y) == popupArrow) {
                     dragging = true;
+                    event.acceptProposedAction();
                 } else {
                     event.ignore();
                 }
             }
 
             onDragMove: {
+                // Only show drop marker, don't insert items yet
                 var index = grid.indexAt(event.x, event.y);
-
-                if (isInternalDrop(event)) {
-                    launcherModel.moveUrl(event.mimeData.source.itemIndex, index);
-                } else {
-                    launcherModel.showDropMarker(index);
+                launcherModel.showDropMarker(index);
+                
+                // Show popup when dragging over arrow or when dragging external URLs
+                var shouldShowPopup = (root.childAt(event.x, event.y) == popupArrow) || 
+                                   (event.mimeData.hasUrls && !internalDragInProgress);
+                
+                if (shouldShowPopup) {
+                    if (!popup.visible) {
+                        // Open popup the same way as clicking the arrow
+                        popupArrow.clicked();
+                    }
+                    event.acceptProposedAction();
+                } else if (popup.visible) {
+                    // If popup is open but we're not over the arrow, let it handle its own close conditions
+                    event.accept(Qt.IgnoreAction);
                 }
-
-                popup.visible = root.childAt(event.x, event.y) == popupArrow;
             }
 
             onDragLeave: {
-                dragging = false;
-                launcherModel.clearDropMarker();
+                // Let the popup handle its own close conditions
+                if (!popup.visible) {
+                    dragging = false;
+                    launcherModel.clearDropMarker();
+                }
             }
 
             onDrop: {
-                dragging = false;
                 launcherModel.clearDropMarker();
+                dragging = false;
 
-                if (isInternalDrop(event)) {
+                if (event.mimeData.hasUrls && !internalDragInProgress) {
+                    // Handle external URL drop on main area
+                    var index = grid.indexAt(event.x, event.y);
+                    if (index === -1) index = launcherModel.count;
+                    launcherModel.insertUrls(index, event.mimeData.urls);
+                    event.accept(event.proposedAction);
+                    return;
+                }
+
+                if (internalDragInProgress && draggedQuicklink !== null && draggedQuicklinkSourceModel) {
+                    // Get fresh copies of both models
+                    var sourceUrls = draggedQuicklinkSourceModel.urls().slice();
+                    var targetModel = popup.visible && popup.mainItem && popup.mainItem.popupModel ? 
+                        popup.mainItem.popupModel : launcherModel;
+                    var targetUrls = targetModel.urls().slice();
+                    
+                    // Verify item exists in source model
+                    if (draggedQuicklinkOriginalIndex >= 0 && 
+                        draggedQuicklinkOriginalIndex < sourceUrls.length &&
+                        sourceUrls[draggedQuicklinkOriginalIndex] === draggedQuicklink) {
+                        
+                        // Calculate target position
+                        var toIndex = grid.indexAt(event.x, event.y);
+                        if (toIndex === -1) {
+                            toIndex = targetUrls.length;
+                        }
+                        
+                        // 1. Get fresh copy of target URLs
+                        var urls = targetModel.urls().slice();
+                        
+                        // 2. If moving between models, remove from source first
+                        if (targetModel !== draggedQuicklinkSourceModel) {
+                            draggedQuicklinkSourceModel.removeUrl(draggedQuicklinkOriginalIndex);
+                            
+                            // If source was popup, update main model
+                            if (draggedQuicklinkSourceModel === popup.mainItem?.popupModel) {
+                                launcherModel.setUrls(draggedQuicklinkSourceModel.urls());
+                            }
+                        }
+                        
+                        // 3. Move item in the target model
+                        if (toIndex > -1) {
+                            // Remove the item from its original position if in the same model
+                            if (targetModel === draggedQuicklinkSourceModel) {
+                                urls.splice(draggedQuicklinkOriginalIndex, 1);
+                                // Adjust target index if moving forward in the same list
+                                if (toIndex > draggedQuicklinkOriginalIndex) {
+                                    toIndex--;
+                                }
+                            }
+                            
+                            // Insert at new position
+                            urls.splice(toIndex, 0, draggedQuicklink);
+                            
+                            // Update the target model
+                            targetModel.setUrls(urls);
+                            
+                            // If target is popup, update main model
+                            if (targetModel === popup.mainItem?.popupModel) {
+                                launcherModel.setUrls(urls);
+                            }
+                        }
+                        
+                        // 4. Update configuration from main model
+                        plasmoid.configuration.launcherUrls = launcherModel.urls();
+                    }
+                    
+                    draggedQuicklink = null;
+                    draggedQuicklinkOriginalIndex = -1;
                     event.accept(Qt.IgnoreAction);
-                    saveConfiguration();
+                    dragging = false;
                 } else {
                     var index = grid.indexAt(event.x, event.y);
                     launcherModel.insertUrls(index == -1 ? launcherModel.count : index, event.mimeData.urls);
                     event.accept(event.proposedAction);
+                    
+                    if (event.mimeData.hasUrls) {
+                        popup.visible = true;
+                    }
                 }
             }
         }
@@ -114,6 +218,7 @@ PlasmoidItem {
 
             GridView {
                 id: grid
+                objectName: "quickLaunchGrid"
                 anchors.fill: parent
                 interactive: false
                 flow: horizontal ? GridView.FlowTopToBottom : GridView.FlowLeftToRight
@@ -159,6 +264,22 @@ PlasmoidItem {
             type: PlasmaCore.Dialog.PopupMenu
             flags: Qt.WindowStaysOnTopHint
             hideOnWindowDeactivate: true
+            location: {
+                switch (plasmoid.location) {
+                    case PlasmaCore.Types.TopEdge: return PlasmaCore.Types.TopEdge;
+                    case PlasmaCore.Types.LeftEdge: return PlasmaCore.Types.LeftEdge;
+                    case PlasmaCore.Types.RightEdge: return PlasmaCore.Types.RightEdge;
+                    default: return PlasmaCore.Types.BottomEdge;
+                }
+            }
+            
+            // This ensures the popup behaves the same whether opened by click or drag
+            onVisibleChanged: {
+                if (visible) {
+                    // Force position update when showing popup
+                    popup.visibleChanged();
+                }
+            }
 
             // Manual positioning is required to apply a pixel offset.
             // The 'location' and 'visualParent' properties do not support this.
@@ -229,27 +350,32 @@ PlasmoidItem {
             subText: popup.visible ? i18n("Hide icons") : i18n("Show hidden icons")
 
             MouseArea {
-                id: arrowMouseArea
+                id: popupArrowMouseArea
                 anchors.fill: parent
-
-                activeFocusOnTab: parent.visible
-
+                hoverEnabled: true
+                
+                function togglePopup() {
+                    popup.visible = !popup.visible;
+                    if (popup.visible) {
+                        // Ensure popup is properly positioned
+                        popup.visibleChanged();
+                    }
+                }
+                
+                onClicked: togglePopup()
+                
                 Keys.onPressed: {
                     switch (event.key) {
                     case Qt.Key_Space:
                     case Qt.Key_Enter:
                     case Qt.Key_Return:
                     case Qt.Key_Select:
-                        arrowMouseArea.clicked(null);
+                        popupArrowMouseArea.clicked(null);
                         break;
                     }
                 }
                 Accessible.name: parent.subText
                 Accessible.role: Accessible.Button
-
-                onClicked: {
-                    popup.visible = !popup.visible
-                }
 
                 Kirigami.Icon {
                     anchors.fill: parent
@@ -347,10 +473,5 @@ PlasmoidItem {
         }
     }
 
-    function isInternalDrop(event)
-    {
-        return event.mimeData.source
-            && event.mimeData.source.GridView
-            && event.mimeData.source.GridView.view == grid;
-    }
+
 }

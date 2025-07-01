@@ -24,12 +24,14 @@ Item {
     height: Math.max(1, popupModel.count) * LayoutManager.popupItemHeight()
 
     DragAndDrop.DropArea {
+        id: dropArea
         anchors.fill: parent
         preventStealing: true
         enabled: !plasmoid.immutable
 
         onDragEnter: {
             dragging = true;
+            event.acceptProposedAction();
         }
 
         onDragMove: {
@@ -38,20 +40,29 @@ Item {
             }
 
             var index = listView.indexAt(event.x, event.y);
+            if (index === -1) {
+                index = popupModel.count;
+            }
 
             if (isInternalDrop(event)) {
                 popupModel.moveUrl(event.mimeData.source.itemIndex, index);
             } else if (event.mimeData.hasUrls) {
                 popupModel.showDropMarker(index);
             }
+            
+            // Accept the drag to keep it going
+            event.acceptProposedAction();
         }
 
-        onDragLeave: {
-            dragging = false;
-            popupModel.clearDropMarker();
+        onDragLeave: function() {
+            // Don't clear dragging state here - let the main area handle it
+            // This prevents the popup from closing when moving between items
+            if (!containsDrag) {
+                popupModel.clearDropMarker();
+            }
         }
 
-        onDrop: {
+        onDrop: function(event) {
             dragging = false;
             popupModel.clearDropMarker();
 

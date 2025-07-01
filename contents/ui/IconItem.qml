@@ -150,19 +150,11 @@ Item {
 
         mimeData {
             url: url
-            source: iconItem
         }
 
         onDragStarted: {
+            mimeData.setData("text/x-quicklaunch-internal-move", JSON.stringify({ itemIndex: iconItem.itemIndex }));
             dragging = true;
-        }
-
-        onDrop: {
-            dragging = false;
-
-            if (action == Qt.MoveAction) {
-                removeLauncher();
-            }
         }
 
         MouseArea {
@@ -189,14 +181,14 @@ Item {
                 }
             }
 
-            onPressed: {
+            onPressed: function(mouse) {
                 if (mouse.button == Qt.RightButton) {
                     contextMenu.refreshActions();
                     contextMenu.open(mouse.x, mouse.y);
                 }
             }
 
-            onClicked: {
+            onClicked: function(mouse) {
                 if (mouse.button == Qt.LeftButton) {
                     logic.openUrl(url)
                 }
