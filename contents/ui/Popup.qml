@@ -16,9 +16,10 @@ import "layout.js" as LayoutManager
 Item {
     id: popup
 
-    property bool dragging: false
     property alias popupModel : popupModel
     property alias listView: listView
+    property bool internalDragActive: false
+    property int internalDragSourceIndex: -1
 
     width: LayoutManager.popupItemWidth()
     height: Math.max(1, popupModel.count) * LayoutManager.popupItemHeight()
@@ -29,51 +30,98 @@ Item {
         preventStealing: true
         enabled: !plasmoid.immutable
 
-        onDragEnter: {
-            dragging = true;
-            event.acceptProposedAction();
+        onDragEnter: function(event) {
+            // Access main widget through proper parent chain
+            var mainWidget = parent;
+            while (mainWidget && !mainWidget.popupLockTimer) {
+                mainWidget = mainWidget.parent;
+            }
+            if (mainWidget && mainWidget.popupLockTimer) {
+                mainWidget.popupLockTimer.restart();
+                mainWidget.suspendPopupClosing = true;
+            }
+            event.accept(Qt.CopyAction);
         }
 
-        onDragMove: {
+        onDragMove: function(event) {
             if (!event.mimeData.hasUrls) {
                 return;
             }
-
-            var index = listView.indexAt(event.x, event.y);
-            if (index === -1) {
-                index = popupModel.count;
+            
+            // Access main widget through proper parent chain
+            var mainWidget = parent;
+            while (mainWidget && !mainWidget.popupLockTimer) {
+                mainWidget = mainWidget.parent;
             }
-
-            if (isInternalDrop(event)) {
-                popupModel.moveUrl(event.mimeData.source.itemIndex, index);
-            } else if (event.mimeData.hasUrls) {
-                popupModel.showDropMarker(index);
+            if (mainWidget && mainWidget.popupLockTimer) {
+                mainWidget.popupLockTimer.restart();
+                mainWidget.suspendPopupClosing = true;
             }
             
             // Accept the drag to keep it going
-            event.acceptProposedAction();
+            event.accept(Qt.CopyAction);
         }
 
-        onDragLeave: function() {
-            // Don't clear dragging state here - let the main area handle it
-            // This prevents the popup from closing when moving between items
-            if (!containsDrag) {
-                popupModel.clearDropMarker();
-            }
+        onDragLeave: function(event) {
+            // Don't reset popup closing here - let timer handle it
+            // This prevents popup from closing when moving within popup area
         }
 
         onDrop: function(event) {
-            dragging = false;
-            popupModel.clearDropMarker();
+            // Stop timer and immediately resume normal popup closing
+            var mainWidget = parent;
+            while (mainWidget && !mainWidget.popupLockTimer) {
+                mainWidget = mainWidget.parent;
+            }
+            if (mainWidget && mainWidget.popupLockTimer) {
+                mainWidget.popupLockTimer.stop();
+                mainWidget.suspendPopupClosing = false;
+            }
 
             if (isInternalDrop(event)) {
+                // Use global sourceIndex if available, fallback to event source
+                var sourceIndex = internalDragSourceIndex >= 0 ? internalDragSourceIndex : (event.mimeData.source ? event.mimeData.source.itemIndex : -1);
+                var targetIndex = listView.indexAt(event.x, event.y);
+                if (targetIndex === -1) targetIndex = popupModel.count;
+                
+                if (sourceIndex >= 0 && sourceIndex < popupModel.count) {
+                    // Get the URL being moved
+                    var urlsArray = popupModel.urls();
+                    var url = urlsArray[sourceIndex];
+                    
+                    // Remove from original position first
+                    popupModel.removeUrl(sourceIndex);
+                    
+                    // Adjust target index if removing from before target
+                    var adjustedTargetIndex = targetIndex;
+                    if (sourceIndex < targetIndex) {
+                        adjustedTargetIndex = targetIndex - 1;
+                    }
+                    
+                    // Insert at new position
+                    popupModel.insertUrl(adjustedTargetIndex, url);
+                    saveConfiguration();
+                }
+                
+                // Reset internal drag flags
+                internalDragActive = false;
+                internalDragSourceIndex = -1;
+                
                 event.accept(Qt.IgnoreAction);
-                saveConfiguration();
             } else if (event.mimeData.hasUrls) {
+                console.log("Processing external URL drop");
                 var index = listView.indexAt(event.x, event.y);
+                
                 popupModel.insertUrls(index == -1 ? popupModel.count : index, event.mimeData.urls);
                 event.accept(event.proposedAction);
+                console.log("URLs inserted, new count:", popupModel.count);
+            } else {
+                console.log("Drop event not handled - no URLs or unrecognized format");
+                event.ignore();
             }
+            
+            // Save configuration after any drop operation
+            saveConfiguration();
         }
     }
 
@@ -121,15 +169,29 @@ Item {
 
     function saveConfiguration()
     {
-        if (!dragging) {
-            plasmoid.configuration.popupUrls = popupModel.urls();
-        }
+        plasmoid.configuration.popupUrls = popupModel.urls();
     }
 
     function isInternalDrop(event)
     {
-        return event.mimeData.source
-            && event.mimeData.source.ListView
-            && event.mimeData.source.ListView.view == listView;
+        // Check global internal drag flag first
+        if (internalDragActive && internalDragSourceIndex >= 0) {
+            return true;
+        }
+        
+        // Fallback: Check if source is an IconItem from our popup
+        if (event.mimeData.source) {
+            // Check if it's an IconItem with itemIndex (internal drag)
+            if (event.mimeData.source.itemIndex !== undefined) {
+                return true;
+            }
+            
+            // Alternative check: if it has ListView property pointing to our listView
+            if (event.mimeData.source.ListView && event.mimeData.source.ListView.view == listView) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

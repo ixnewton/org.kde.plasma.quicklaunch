@@ -147,13 +147,22 @@ Item {
         defaultAction: Qt.MoveAction
         supportedActions: Qt.IgnoreAction | Qt.MoveAction
         delegate: icon
+        source: iconItem  // Pass the iconItem as source for internal drag detection
 
         mimeData {
             url: url
         }
 
         onDragStarted: {
-            mimeData.setData("text/x-quicklaunch-internal-move", JSON.stringify({ itemIndex: iconItem.itemIndex }));
+            // Set global internal drag flags if this is a popup item
+            if (isPopupItem && iconItem.ListView && iconItem.ListView.view && iconItem.ListView.view.parent) {
+                var popup = iconItem.ListView.view.parent;
+                if (popup.internalDragActive !== undefined) {
+                    popup.internalDragActive = true;
+                    popup.internalDragSourceIndex = iconItem.itemIndex;
+                }
+            }
+            
             dragging = true;
         }
 

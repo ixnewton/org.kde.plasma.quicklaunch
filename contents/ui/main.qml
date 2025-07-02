@@ -25,6 +25,17 @@ PlasmoidItem {
     readonly property bool vertical : plasmoid.formFactor == PlasmaCore.Types.Vertical || (plasmoid.formFactor == PlasmaCore.Types.Planar && height > width)
     readonly property bool horizontal : plasmoid.formFactor == PlasmaCore.Types.Horizontal
     property bool dragging : false
+    property bool suspendPopupClosing: false
+    
+    // Timer to lock popup open for 3 seconds during drag operations
+    Timer {
+        id: popupLockTimer
+        interval: 3000  // 3 seconds
+        repeat: false
+        onTriggered: {
+            suspendPopupClosing = false;
+        }
+    }
     property bool internalDragInProgress: false
     property var draggedQuicklink: null
     property int draggedQuicklinkOriginalIndex: -1
@@ -49,11 +60,11 @@ PlasmoidItem {
             preventStealing: true
             enabled: !plasmoid.immutable
 
-            onDragEnter: {
-                internalDragInProgress = event.mimeData.hasFormat("text/x-quicklaunch-internal-move");
+            onDragEnter: function(event) {
+                internalDragInProgress = event.mimeData.formats.indexOf("text/x-quicklaunch-internal-move") !== -1;
 
                 if (internalDragInProgress) {
-                    var data = JSON.parse(event.mimeData.getData("text/x-quicklaunch-internal-move"));
+                    var data = JSON.parse(event.mimeData.getDataAsString("text/x-quicklaunch-internal-move"));
                     draggedQuicklinkOriginalIndex = data.itemIndex;
                     
                     // Determine source model (popup or main launcher)
@@ -67,16 +78,18 @@ PlasmoidItem {
 
                 if (internalDragInProgress || event.mimeData.hasUrls || root.childAt(event.x, event.y) == popupArrow) {
                     dragging = true;
-                    event.acceptProposedAction();
+                    // Start 3-second timer to lock popup open
+                    suspendPopupClosing = true;
+                    popupLockTimer.restart();
+                    event.accept();
                 } else {
                     event.ignore();
                 }
             }
 
-            onDragMove: {
-                // Only show drop marker, don't insert items yet
-                var index = grid.indexAt(event.x, event.y);
-                launcherModel.showDropMarker(index);
+            onDragMove: function(event) {
+                // Ensure dragging state is maintained
+                dragging = true;
                 
                 // Show popup when dragging over arrow or when dragging external URLs
                 var shouldShowPopup = (root.childAt(event.x, event.y) == popupArrow) || 
@@ -85,38 +98,60 @@ PlasmoidItem {
                 if (shouldShowPopup) {
                     if (!popup.visible) {
                         // Open popup the same way as clicking the arrow
-                        popupArrow.clicked();
+                        popupArrowMouseArea.togglePopup();
                     }
-                    event.acceptProposedAction();
-                } else if (popup.visible) {
-                    // If popup is open but we're not over the arrow, let it handle its own close conditions
-                    event.accept(Qt.IgnoreAction);
+                    // Restart timer to keep popup locked for external drags
+                    if (event.mimeData.hasUrls && !internalDragInProgress) {
+                        suspendPopupClosing = true;
+                        popupLockTimer.restart();
+                    }
+                    event.accept();
                 }
             }
 
-            onDragLeave: {
-                // Let the popup handle its own close conditions
-                if (!popup.visible) {
-                    dragging = false;
-                    launcherModel.clearDropMarker();
-                }
-            }
-
-            onDrop: {
+            onDragLeave: function(event) {
+                // Don't reset dragging state on drag leave - let timer handle it
+                // This prevents popup from closing when moving between main area and popup
                 launcherModel.clearDropMarker();
+            }
+
+            onDrop: function(event) {
                 dragging = false;
+                // Stop timer and immediately resume normal popup closing
+                popupLockTimer.stop();
+                suspendPopupClosing = false;
+
+                console.log("Main widget drop - popup visible:", popup.visible, "drop coordinates:", event.x, event.y);
+                
+                // If popup is visible and drop is over popup area, let popup handle it
+                if (popup.visible && popup.contains(Qt.point(event.x - popup.x, event.y - popup.y))) {
+                    console.log("Drop is over popup area - letting popup handle it");
+                    event.ignore(); // Let the popup's drop handler take over
+                    return;
+                }
 
                 if (event.mimeData.hasUrls && !internalDragInProgress) {
+                    console.log("Main widget handling external URL drop");
                     // Handle external URL drop on main area
                     var index = grid.indexAt(event.x, event.y);
                     if (index === -1) index = launcherModel.count;
                     launcherModel.insertUrls(index, event.mimeData.urls);
-                    event.accept(event.proposedAction);
+                    event.accept();
+                    
+                    // Show popup after dropping external URLs if not already visible
+                    if (!popup.visible) {
+                        popup.visible = true;
+                    }
+                    
+                    // Ensure normal popup closing behavior is restored after drop
+                    Qt.callLater(function() {
+                        dragging = false;
+                    });
                     return;
                 }
 
                 if (internalDragInProgress && draggedQuicklink !== null && draggedQuicklinkSourceModel) {
-                    // Get fresh copies of both models
+                    // Handle internal drag and drop (moving items between lists)
                     var sourceUrls = draggedQuicklinkSourceModel.urls().slice();
                     var targetModel = popup.visible && popup.mainItem && popup.mainItem.popupModel ? 
                         popup.mainItem.popupModel : launcherModel;
@@ -133,10 +168,10 @@ PlasmoidItem {
                             toIndex = targetUrls.length;
                         }
                         
-                        // 1. Get fresh copy of target URLs
+                        // Get fresh copy of target URLs
                         var urls = targetModel.urls().slice();
                         
-                        // 2. If moving between models, remove from source first
+                        // If moving between models, remove from source first
                         if (targetModel !== draggedQuicklinkSourceModel) {
                             draggedQuicklinkSourceModel.removeUrl(draggedQuicklinkOriginalIndex);
                             
@@ -146,7 +181,7 @@ PlasmoidItem {
                             }
                         }
                         
-                        // 3. Move item in the target model
+                        // Move item in the target model
                         if (toIndex > -1) {
                             // Remove the item from its original position if in the same model
                             if (targetModel === draggedQuicklinkSourceModel) {
@@ -169,23 +204,19 @@ PlasmoidItem {
                             }
                         }
                         
-                        // 4. Update configuration from main model
+                        // Update configuration from main model
                         plasmoid.configuration.launcherUrls = launcherModel.urls();
                     }
                     
+                    // Reset drag state
                     draggedQuicklink = null;
                     draggedQuicklinkOriginalIndex = -1;
+                    internalDragInProgress = false;
                     event.accept(Qt.IgnoreAction);
-                    dragging = false;
-                } else {
-                    var index = grid.indexAt(event.x, event.y);
-                    launcherModel.insertUrls(index == -1 ? launcherModel.count : index, event.mimeData.urls);
-                    event.accept(event.proposedAction);
-                    
-                    if (event.mimeData.hasUrls) {
-                        popup.visible = true;
-                    }
                 }
+                
+                // Reset drag state
+                dragging = false;
             }
         }
 
@@ -263,7 +294,15 @@ PlasmoidItem {
             id: popup
             type: PlasmaCore.Dialog.PopupMenu
             flags: Qt.WindowStaysOnTopHint
-            hideOnWindowDeactivate: true
+            hideOnWindowDeactivate: !suspendPopupClosing
+            
+            // Ensure suspendPopupClosing is reset when popup becomes inactive
+            onActiveChanged: {
+                if (!active && !dragging) {
+                    suspendPopupClosing = false;
+                }
+            }
+            
             location: {
                 switch (plasmoid.location) {
                     case PlasmaCore.Types.TopEdge: return PlasmaCore.Types.TopEdge;
@@ -276,8 +315,8 @@ PlasmoidItem {
             // This ensures the popup behaves the same whether opened by click or drag
             onVisibleChanged: {
                 if (visible) {
-                    // Force position update when showing popup
-                    popup.visibleChanged();
+                    // Position is handled automatically by PlasmaCore.Dialog
+                    // No manual positioning needed
                 }
             }
 
@@ -356,10 +395,7 @@ PlasmoidItem {
                 
                 function togglePopup() {
                     popup.visible = !popup.visible;
-                    if (popup.visible) {
-                        // Ensure popup is properly positioned
-                        popup.visibleChanged();
-                    }
+                    // Position is handled automatically by PlasmaCore.Dialog
                 }
                 
                 onClicked: togglePopup()
