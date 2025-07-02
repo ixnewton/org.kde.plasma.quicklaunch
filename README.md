@@ -12,3 +12,5 @@ When it has been road tested I will try to have these improvments accepted by th
 Install by replacing the contents of your /usr/share/plasma/plasmoids/org.kde.plasma.quicklaunch/ with the downloaded version from here.
 
 Restart KDE Plasma using: kquitapp5 plasmashell && kstart5 plasmashell
+
+![Screenshot_20250702_221558_b](https://github.com/user-attachments/assets/2bdd486f-25dc-4452-bd96-601fda6da54c)
