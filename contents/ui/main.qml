@@ -257,6 +257,14 @@ PlasmoidItem {
                 cellHeight: LayoutManager.preferredCellHeight()
                 visible: count
 
+                onCurrentIndexChanged: {
+                    console.log("[DEBUG] Main GridView currentIndex changed to:", currentIndex);
+                }
+
+                onFocusChanged: {
+                    console.log("[DEBUG] Main GridView focus changed to:", focus);
+                }
+
                 model: UrlModel {
                     id: launcherModel
                 }

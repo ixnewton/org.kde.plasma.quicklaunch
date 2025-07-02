@@ -139,6 +139,8 @@ Item {
         }
     }
 
+
+
     DragAndDrop.DragArea {
         id: dragArea
         width: Math.min(iconItem.width, iconItem.height)
@@ -171,7 +173,7 @@ Item {
             anchors.fill: parent
             anchors.margins: LayoutManager.itemPadding()
             hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            acceptedButtons: Qt.LeftButton  // Only left button for normal interaction
 
             activeFocusOnTab: true
             Accessible.name: iconItem.launcher.applicationName
@@ -179,26 +181,72 @@ Item {
             Accessible.role: Accessible.Button
 
             onActiveFocusChanged: {
+                // console.log("[DEBUG] IconItem", itemIndex, "activeFocusChanged:", activeFocus);
                 if (activeFocus) {
+                    // console.log("[DEBUG] IconItem", itemIndex, "gained focus, calling entered()");
                     entered();
                 }
             }
 
             onEntered: {
+                // console.log("[DEBUG] IconItem", itemIndex, "onEntered - setting highlight");
+                // Set highlight to follow mouse hover
                 if (iconItem.ListView.view) {
                     iconItem.ListView.view.currentIndex = iconItem.itemIndex;
                 }
+                if (iconItem.GridView.view) {
+                    iconItem.GridView.view.currentIndex = iconItem.itemIndex;
+                }
+            }
+
+            onExited: {
+                // console.log("[DEBUG] IconItem", itemIndex, "onExited");
+                // Highlight will naturally change when mouse enters another item
+                // No special handling needed on exit
             }
 
             onPressed: function(mouse) {
-                if (mouse.button == Qt.RightButton) {
-                    contextMenu.refreshActions();
-                    contextMenu.open(mouse.x, mouse.y);
+                // console.log("[DEBUG] IconItem", itemIndex, "onPressed - button:", mouse.button, "(Left:", Qt.LeftButton, ")");
+                // Only handle left button here - right button handled separately
+            }
+
+            onPressAndHold: function(mouse) {
+                // console.log("[DEBUG] IconItem", itemIndex, "onPressAndHold - toggling selection");
+                if (mouse.button == Qt.LeftButton) {
+                    // Toggle selection: if currently selected, deselect; if not selected, select
+                    var currentIndex = -1;
+                    if (iconItem.ListView.view) {
+                        currentIndex = iconItem.ListView.view.currentIndex;
+                    } else if (iconItem.GridView.view) {
+                        currentIndex = iconItem.GridView.view.currentIndex;
+                    }
+                    
+                    if (currentIndex === iconItem.itemIndex) {
+                        // Currently selected - deselect by setting to -1
+                        // console.log("[DEBUG] IconItem", itemIndex, "deselecting (was selected)");
+                        if (iconItem.ListView.view) {
+                            iconItem.ListView.view.currentIndex = -1;
+                        }
+                        if (iconItem.GridView.view) {
+                            iconItem.GridView.view.currentIndex = -1;
+                        }
+                    } else {
+                        // Not currently selected - select this item
+                        // console.log("[DEBUG] IconItem", itemIndex, "selecting (was not selected)");
+                        if (iconItem.ListView.view) {
+                            iconItem.ListView.view.currentIndex = iconItem.itemIndex;
+                        }
+                        if (iconItem.GridView.view) {
+                            iconItem.GridView.view.currentIndex = iconItem.itemIndex;
+                        }
+                    }
                 }
             }
 
             onClicked: function(mouse) {
+                // console.log("[DEBUG] IconItem", itemIndex, "onClicked - button:", mouse.button, "(Left:", Qt.LeftButton, ")");
                 if (mouse.button == Qt.LeftButton) {
+                    // console.log("[DEBUG] IconItem", itemIndex, "left-click detected, opening URL:", url);
                     logic.openUrl(url)
                 }
             }
@@ -267,7 +315,10 @@ Item {
                 PlasmaExtras.MenuItem {
                     text: i18nc("@action:inmenu", "Edit Launcher…")
                     icon: "document-edit"
-                    onClicked: editLauncher()
+                    onClicked: {
+                        console.log("[DEBUG] IconItem", itemIndex, "Edit Launcher clicked");
+                        editLauncher();
+                    }
                 }
 
                 PlasmaExtras.MenuItem {
@@ -316,6 +367,20 @@ Item {
                 id: menuItemComponent
                 PlasmaExtras.MenuItem { }
             }
+        }
+    }
+
+    // Separate MouseArea for right-click to prevent selection highlight
+    MouseArea {
+        id: rightClickArea
+        anchors.fill: parent
+        anchors.margins: LayoutManager.itemPadding()
+        acceptedButtons: Qt.RightButton
+        hoverEnabled: false  // Don't interfere with hover from main MouseArea
+        
+        onPressed: function(mouse) {
+            // console.log("[DEBUG] IconItem", itemIndex, "right-click detected, opening context menu (no selection)");
+            contextMenu.open(mouse.x, mouse.y);
         }
     }
 
