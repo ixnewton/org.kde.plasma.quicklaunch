@@ -8,6 +8,6 @@ This is a re-worked version of the current org.kde.plasma.quicklaunch widget. Th
 
 When it has been road tested I will try to have these improvments accepted by the official KDE repo.
 
-Install by replacing your /usr/share/plasma/plasmoids/org.kde.plasma.quicklaunch/ with the contents/ folder
+Install by replacing the contents of your /usr/share/plasma/plasmoids/org.kde.plasma.quicklaunch/ with the downloaded version from here.
 
 Restart KDE Plasma using: kquitapp5 plasmashell && kstart5 plasmashell
