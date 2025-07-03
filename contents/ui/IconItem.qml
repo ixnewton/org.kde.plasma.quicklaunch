@@ -228,9 +228,9 @@ Item {
             }
 
             onPressAndHold: function(mouse) {
-                // console.log("[DEBUG] IconItem", itemIndex, "onPressAndHold - no selection change on long press");
-                // Disable selection on long press (including right click long press)
-                // Long press no longer toggles selection
+                // Explicitly handle pressAndHold to prevent any default behavior
+                // Do nothing - this prevents long press from triggering selection
+                mouse.accepted = true;
             }
 
             onClicked: function(mouse) {
