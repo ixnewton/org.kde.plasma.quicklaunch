@@ -84,7 +84,7 @@ PlasmoidItem {
                 
                 // Show popup when dragging over arrow or when dragging external URLs
                 var shouldShowPopup = (root.childAt(event.x, event.y) == popupArrow) || 
-                                   (event.mimeData.hasUrls && !internalDragInProgress);
+                                   (event.mimeData.hasUrls && !internalDragActive);
                 
                 if (shouldShowPopup) {
                     if (!popup.visible) {
@@ -92,7 +92,7 @@ PlasmoidItem {
                         popupArrowMouseArea.togglePopup();
                     }
                     // Restart timer to keep popup locked for external drags
-                    if (event.mimeData.hasUrls && !internalDragInProgress) {
+                    if (event.mimeData.hasUrls && !internalDragActive) {
                         suspendPopupClosing = true;
                         popupLockTimer.restart();
                     }
