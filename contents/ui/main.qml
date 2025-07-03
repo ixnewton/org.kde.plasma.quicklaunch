@@ -22,8 +22,21 @@ PlasmoidItem {
     readonly property bool showLauncherNames : plasmoid.configuration.showLauncherNames
     readonly property bool enablePopup : plasmoid.configuration.enablePopup
     readonly property string title : plasmoid.formFactor == PlasmaCore.Types.Planar ? plasmoid.configuration.title : ""
-    readonly property bool vertical : plasmoid.formFactor == PlasmaCore.Types.Vertical || (plasmoid.formFactor == PlasmaCore.Types.Planar && height > width)
-    readonly property bool horizontal : plasmoid.formFactor == PlasmaCore.Types.Horizontal
+    readonly property bool onLeftOrRightPanel: plasmoid.location === PlasmaCore.Types.LeftEdge || plasmoid.location === PlasmaCore.Types.RightEdge
+    property bool vertical: plasmoid.formFactor == PlasmaCore.Types.Vertical || (plasmoid.formFactor == PlasmaCore.Types.Planar && plasmoid.height > plasmoid.width)
+    property bool horizontal: !vertical
+    
+    // Plasma theme detection for popup background using Kirigami.Theme
+    // Expose theme properties for popup use
+    readonly property color themeBackgroundColor: Kirigami.Theme.backgroundColor
+    readonly property color themeTextColor: Kirigami.Theme.textColor
+    readonly property color themeHighlightColor: Kirigami.Theme.highlightColor
+    readonly property color themeButtonBackgroundColor: Kirigami.Theme.alternateBackgroundColor
+    readonly property string themeColorScheme: Kirigami.Theme.colorSet
+    readonly property bool themeDarkMode: Kirigami.Theme.colorSet === Kirigami.Theme.Complementary
+    
+    // Debug: Alternative approach to detect SVG background themes
+    // Note: Direct SVG access not available, using Dialog properties instead
     property bool dragging : false
     property bool suspendPopupClosing: false
     
@@ -42,7 +55,6 @@ PlasmoidItem {
     property int internalDragSourceIndex: -1
 
     readonly property bool onTopOrBottomPanel: horizontal && (plasmoid.location == PlasmaCore.Types.TopEdge || plasmoid.location == PlasmaCore.Types.BottomEdge)
-    readonly property bool onLeftOrRightPanel: vertical && (plasmoid.location == PlasmaCore.Types.LeftEdge || plasmoid.location == PlasmaCore.Types.RightEdge)
 
     Layout.minimumWidth: LayoutManager.minimumWidth()
     Layout.minimumHeight: LayoutManager.minimumHeight()
@@ -287,6 +299,10 @@ PlasmoidItem {
             flags: Qt.WindowStaysOnTopHint
             hideOnWindowDeactivate: !suspendPopupClosing
             
+            // Use proper Plasma dialog background system
+            // Dialog backgrounds are designed as complete unified backgrounds (not 4-part like panels)
+            backgroundHints: PlasmaCore.Dialog.StandardBackground
+            
             // Ensure suspendPopupClosing is reset when popup becomes inactive
             onActiveChanged: {
                 if (!active && !dragging) {
@@ -306,8 +322,108 @@ PlasmoidItem {
             // This ensures the popup behaves the same whether opened by click or drag
             onVisibleChanged: {
                 if (visible) {
-                    // Position is handled automatically by PlasmaCore.Dialog
-                    // No manual positioning needed
+                    // Position popup with proper margins to prevent background cropping
+                    var pos = popup.popupPosition(root, Qt.AlignCenter);
+                    
+                    // Add margin to prevent cropping of rounded corners at top
+                    var margin = 8; // Ensure rounded corners are visible
+                    
+                    // Adjust position based on panel location to avoid cropping
+                    switch (plasmoid.location) {
+                        case PlasmaCore.Types.TopEdge:
+                            pos.y += margin; // Move down from top edge
+                            break;
+                        case PlasmaCore.Types.BottomEdge:
+                            pos.y -= margin; // Move up from bottom edge
+                            break;
+                        case PlasmaCore.Types.LeftEdge:
+                            pos.x += margin; // Move right from left edge
+                            break;
+                        case PlasmaCore.Types.RightEdge:
+                            pos.x -= margin; // Move left from right edge
+                            break;
+                    }
+                    
+                    popup.x = pos.x;
+                    popup.y = pos.y;
+                    
+                    console.log("[THEME] Popup positioned at:", pos.x, ",", pos.y, "with margin:", margin);
+                    
+                    // Debug: Show detected Plasma theme properties
+                    console.log("[THEME] Plasma Background Color:", root.themeBackgroundColor);
+                    console.log("[THEME] Plasma Text Color:", root.themeTextColor);
+                    console.log("[THEME] Plasma Highlight Color:", root.themeHighlightColor);
+                    console.log("[THEME] Plasma Button Background:", root.themeButtonBackgroundColor);
+                    console.log("[THEME] Color Scheme:", root.themeColorScheme);
+                    console.log("[THEME] Dark Mode:", root.themeDarkMode);
+                    
+                    // Debug: Show Plasma Dialog SVG background information
+                    console.log("[THEME] Dialog Type:", popup.type);
+                    console.log("[THEME] Dialog Location:", popup.location);
+                    console.log("[THEME] Dialog Flags:", popup.flags);
+                    if (popup.backgroundHints !== undefined) {
+                        console.log("[THEME] Dialog Background Hints:", popup.backgroundHints);
+                    }
+                    
+                    // Try to access internal background SVG if available
+                    if (popup.children && popup.children.length > 0) {
+                        for (var i = 0; i < popup.children.length; i++) {
+                            var child = popup.children[i];
+                            console.log("[THEME] Dialog Child", i, ":", child.toString());
+                            if (child.imagePath !== undefined) {
+                                console.log("[THEME] SVG Image Path:", child.imagePath);
+                            }
+                            if (child.prefix !== undefined) {
+                                console.log("[THEME] SVG Prefix:", child.prefix);
+                            }
+                        }
+                    }
+                    
+                    // Debug: Show alternative SVG background information
+                    console.log("[THEME] === SVG Background Debug (Alternative Method) ===");
+                    
+                    // Show what we can detect from the Dialog itself
+                    console.log("[THEME] Dialog uses PopupMenu type - likely uses dialogs/background SVG");
+                    console.log("[THEME] Expected SVG paths:");
+                    console.log("[THEME]   - dialogs/background.svg (popup background)");
+                    console.log("[THEME]   - widgets/panel-background.svg (panel background)");
+                    
+                    // Debug: Show dialog background configuration
+                    console.log("[THEME] === Dialog Background Configuration ===");
+                    console.log("[THEME] Using StandardBackground - Plasma handles outer container styling");
+                    console.log("[THEME] Dialog background: Uses translucent/dialogs/background.svgz (unified background)");
+                    console.log("[THEME] Panel background not suitable: translucent/widgets/panel-background.svgz is 4-part system");
+                    console.log("[THEME] Panel backgrounds: left cap + center stretch + right cap + corners (for panels only)");
+                    console.log("[THEME] Dialog backgrounds: complete unified background (appropriate for popups)");
+                    
+                    // Try to detect theme information through available properties
+                    try {
+                        // Check if we can access theme through global objects
+                        if (typeof theme !== 'undefined') {
+                            console.log("[THEME] Global theme object available:", theme);
+                            if (theme.themeName) {
+                                console.log("[THEME] Current theme name:", theme.themeName);
+                            }
+                        }
+                        
+                        // Check plasmoid theme information
+                        if (plasmoid.theme) {
+                            console.log("[THEME] Plasmoid theme available:", plasmoid.theme);
+                        }
+                        
+                        // Show what type of background the dialog should be using
+                        console.log("[THEME] Dialog type suggests SVG background:");
+                        console.log("[THEME]   - Type:", popup.type, "(PopupMenu = themed background)");
+                        console.log("[THEME]   - Location:", popup.location, "(affects SVG orientation)");
+                        
+                        // Estimate theme file locations based on common Plasma paths
+                        console.log("[THEME] Likely SVG file locations:");
+                        console.log("[THEME]   - ~/.local/share/plasma/desktoptheme/[theme]/dialogs/background.svg");
+                        console.log("[THEME]   - /usr/share/plasma/desktoptheme/[theme]/dialogs/background.svg");
+                        
+                    } catch (e) {
+                        console.log("[THEME] Error accessing theme info:", e);
+                    }
                 }
             }
 
@@ -358,7 +474,7 @@ PlasmoidItem {
                 width: popupContent.width
                 height: popupContent.height
 
-                Popup {
+                QuicklaunchPopup {
                     id: popupContent
                     anchors.centerIn: parent
                     Keys.onEscapePressed: popup.visible = false

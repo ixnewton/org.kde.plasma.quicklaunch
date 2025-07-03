@@ -7,6 +7,7 @@
 import QtQuick 2.2
 
 import org.kde.kirigami 2.20 as Kirigami
+import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.extras 2.0 as PlasmaExtras
 
 import org.kde.draganddrop 2.0 as DragAndDrop
@@ -23,6 +24,9 @@ Item {
 
     width: LayoutManager.popupItemWidth()
     height: Math.max(1, popupModel.count) * LayoutManager.popupItemHeight()
+    
+    // No custom background - let Plasma handle the outer container background
+    // The dialog's StandardBackground will provide the proper outer margins and styling
 
     DragAndDrop.DropArea {
         id: dropArea
