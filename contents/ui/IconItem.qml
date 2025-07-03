@@ -156,12 +156,29 @@ Item {
         }
 
         onDragStarted: {
-            // Set global internal drag flags if this is a popup item
+            // console.log("[DEBUG] IconItem drag started - isPopupItem:", isPopupItem, "itemIndex:", iconItem.itemIndex, "url:", url);
+            
+            // Set global internal drag flags for both popup and main widget items
             if (isPopupItem && iconItem.ListView && iconItem.ListView.view && iconItem.ListView.view.parent) {
+                // Handle popup item drag
                 var popup = iconItem.ListView.view.parent;
                 if (popup.internalDragActive !== undefined) {
                     popup.internalDragActive = true;
                     popup.internalDragSourceIndex = iconItem.itemIndex;
+                    console.log("[DEBUG] Popup drag flags set - sourceIndex:", iconItem.itemIndex);
+                }
+            } else if (!isPopupItem && iconItem.GridView && iconItem.GridView.view) {
+                // Handle main widget item drag - find root widget
+                var rootWidget = iconItem.GridView.view;
+                while (rootWidget && rootWidget.internalDragActive === undefined) {
+                    rootWidget = rootWidget.parent;
+                }
+                if (rootWidget && rootWidget.internalDragActive !== undefined) {
+                    rootWidget.internalDragActive = true;
+                    rootWidget.internalDragSourceIndex = iconItem.itemIndex;
+                    console.log("[DEBUG] Main widget drag flags set - sourceIndex:", iconItem.itemIndex);
+                } else {
+                    console.log("[DEBUG] Could not find root widget for main item drag");
                 }
             }
             
@@ -211,9 +228,16 @@ Item {
             }
 
             onPressAndHold: function(mouse) {
-                // console.log("[DEBUG] IconItem", itemIndex, "onPressAndHold - toggling selection");
+                // console.log("[DEBUG] IconItem", itemIndex, "onPressAndHold - no selection change on long press");
+                // Disable selection on long press (including right click long press)
+                // Long press no longer toggles selection
+            }
+
+            onClicked: function(mouse) {
+                // console.log("[DEBUG] IconItem", itemIndex, "onClicked - button:", mouse.button, "(Left:", Qt.LeftButton, ")");
                 if (mouse.button == Qt.LeftButton) {
-                    // Toggle selection: if currently selected, deselect; if not selected, select
+                    // Left click now toggles selection instead of opening URL
+                    // console.log("[DEBUG] IconItem", itemIndex, "left-click detected, toggling selection");
                     var currentIndex = -1;
                     if (iconItem.ListView.view) {
                         currentIndex = iconItem.ListView.view.currentIndex;
@@ -242,12 +266,12 @@ Item {
                     }
                 }
             }
-
-            onClicked: function(mouse) {
-                // console.log("[DEBUG] IconItem", itemIndex, "onClicked - button:", mouse.button, "(Left:", Qt.LeftButton, ")");
+            
+            onDoubleClicked: function(mouse) {
+                // Double-click opens the URL (moved from single click)
                 if (mouse.button == Qt.LeftButton) {
-                    // console.log("[DEBUG] IconItem", itemIndex, "left-click detected, opening URL:", url);
-                    logic.openUrl(url)
+                    // console.log("[DEBUG] IconItem", itemIndex, "double-click detected, opening URL:", url);
+                    logic.openUrl(url);
                 }
             }
 

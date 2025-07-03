@@ -36,10 +36,10 @@ PlasmoidItem {
             suspendPopupClosing = false;
         }
     }
-    property bool internalDragInProgress: false
-    property var draggedQuicklink: null
-    property int draggedQuicklinkOriginalIndex: -1
-    property var draggedQuicklinkSourceModel: null
+    
+    // Internal drag tracking (same as popup)
+    property bool internalDragActive: false
+    property int internalDragSourceIndex: -1
 
     readonly property bool onTopOrBottomPanel: horizontal && (plasmoid.location == PlasmaCore.Types.TopEdge || plasmoid.location == PlasmaCore.Types.BottomEdge)
     readonly property bool onLeftOrRightPanel: vertical && (plasmoid.location == PlasmaCore.Types.LeftEdge || plasmoid.location == PlasmaCore.Types.RightEdge)
@@ -61,28 +61,19 @@ PlasmoidItem {
             enabled: !plasmoid.immutable
 
             onDragEnter: function(event) {
-                internalDragInProgress = event.mimeData.formats.indexOf("text/x-quicklaunch-internal-move") !== -1;
-
-                if (internalDragInProgress) {
-                    var data = JSON.parse(event.mimeData.getDataAsString("text/x-quicklaunch-internal-move"));
-                    draggedQuicklinkOriginalIndex = data.itemIndex;
-                    
-                    // Determine source model (popup or main launcher)
-                    var isFromPopup = popup.visible && popup.mainItem && popup.mainItem.popupModel;
-                    draggedQuicklinkSourceModel = isFromPopup ? popup.mainItem.popupModel : launcherModel;
-                    
-                    var urls = draggedQuicklinkSourceModel.urls();
-                    draggedQuicklink = urls[draggedQuicklinkOriginalIndex];
-                    // Just note the original position - don't modify array yet
-                }
-
-                if (internalDragInProgress || event.mimeData.hasUrls || root.childAt(event.x, event.y) == popupArrow) {
+                // Check for internal drag using same logic as popup
+                var isInternal = isInternalDrop(event);
+                
+                // console.log("[DEBUG] Main widget onDragEnter - isInternal:", isInternal, "hasUrls:", event.mimeData.hasUrls, "internalDragActive:", internalDragActive, "sourceIndex:", internalDragSourceIndex);
+                
+                if (isInternal || event.mimeData.hasUrls || root.childAt(event.x, event.y) == popupArrow) {
                     dragging = true;
                     // Start 3-second timer to lock popup open
                     suspendPopupClosing = true;
                     popupLockTimer.restart();
-                    event.accept();
+                    // console.log("[DEBUG] Main widget drag accepted - dragging:", dragging);
                 } else {
+                    // console.log("[DEBUG] Main widget drag ignored");
                     event.ignore();
                 }
             }
@@ -121,97 +112,89 @@ PlasmoidItem {
                 popupLockTimer.stop();
                 suspendPopupClosing = false;
 
-                console.log("Main widget drop - popup visible:", popup.visible, "drop coordinates:", event.x, event.y);
+                // console.log("Main widget drop - popup visible:", popup.visible, "drop coordinates:", event.x, event.y);
                 
                 // If popup is visible and drop is over popup area, let popup handle it
                 if (popup.visible && popup.contains(Qt.point(event.x - popup.x, event.y - popup.y))) {
-                    console.log("Drop is over popup area - letting popup handle it");
+                    // console.log("Drop is over popup area - letting popup handle it");
                     event.ignore(); // Let the popup's drop handler take over
                     return;
                 }
 
-                if (event.mimeData.hasUrls && !internalDragInProgress) {
-                    console.log("Main widget handling external URL drop");
+                if (event.mimeData.hasUrls && !isInternalDrop(event)) {
+                    // console.log("[DEBUG] Main widget handling external URL drop");
                     // Handle external URL drop on main area
                     var index = grid.indexAt(event.x, event.y);
                     if (index === -1) index = launcherModel.count;
+                    
+                    // console.log("[DEBUG] External URLs:", event.mimeData.urls, "inserting at index:", index);
+                    // console.log("[DEBUG] URLs before external drop:", JSON.stringify(launcherModel.urls()));
+                    
                     launcherModel.insertUrls(index, event.mimeData.urls);
-                    event.accept();
+                    
+                    // console.log("[DEBUG] URLs after external drop:", JSON.stringify(launcherModel.urls()));
+                    // console.log("[DEBUG] New model count:", launcherModel.count);
                     
                     // Show popup after dropping external URLs if not already visible
                     if (!popup.visible) {
                         popup.visible = true;
+                        // console.log("[DEBUG] Popup opened after external drop");
                     }
                     
                     // Ensure normal popup closing behavior is restored after drop
                     Qt.callLater(function() {
                         dragging = false;
+                        // console.log("[DEBUG] Dragging state reset after external drop");
                     });
                     return;
                 }
 
-                if (internalDragInProgress && draggedQuicklink !== null && draggedQuicklinkSourceModel) {
-                    // Handle internal drag and drop (moving items between lists)
-                    var sourceUrls = draggedQuicklinkSourceModel.urls().slice();
-                    var targetModel = popup.visible && popup.mainItem && popup.mainItem.popupModel ? 
-                        popup.mainItem.popupModel : launcherModel;
-                    var targetUrls = targetModel.urls().slice();
+                if (isInternalDrop(event)) {
+                    // Use same logic as popup for internal drops
+                    var sourceIndex = internalDragSourceIndex >= 0 ? internalDragSourceIndex : (event.mimeData.source ? event.mimeData.source.itemIndex : -1);
+                    var targetIndex = grid.indexAt(event.x, event.y);
+                    if (targetIndex === -1) targetIndex = launcherModel.count;
                     
-                    // Verify item exists in source model
-                    if (draggedQuicklinkOriginalIndex >= 0 && 
-                        draggedQuicklinkOriginalIndex < sourceUrls.length &&
-                        sourceUrls[draggedQuicklinkOriginalIndex] === draggedQuicklink) {
+                    // console.log("[DEBUG] Main widget internal drop - sourceIndex:", sourceIndex, "targetIndex:", targetIndex, "modelCount:", launcherModel.count);
+                    
+                    if (sourceIndex >= 0 && sourceIndex < launcherModel.count) {
+                        // Get the URL being moved
+                        var urlsArray = launcherModel.urls();
+                        var url = urlsArray[sourceIndex];
                         
-                        // Calculate target position
-                        var toIndex = grid.indexAt(event.x, event.y);
-                        if (toIndex === -1) {
-                            toIndex = targetUrls.length;
+                        // console.log("[DEBUG] Moving URL:", url, "from index:", sourceIndex, "to target:", targetIndex);
+                        // console.log("[DEBUG] URLs before move:", JSON.stringify(urlsArray));
+                        
+                        // Remove from original position first
+                        launcherModel.removeUrl(sourceIndex);
+                        // console.log("[DEBUG] After removal, count:", launcherModel.count);
+                        
+                        // Adjust target index if removing from before target
+                        var adjustedTargetIndex = targetIndex;
+                        if (sourceIndex < targetIndex) {
+                            adjustedTargetIndex = targetIndex - 1;
                         }
                         
-                        // Get fresh copy of target URLs
-                        var urls = targetModel.urls().slice();
+                        // console.log("[DEBUG] Adjusted target index:", adjustedTargetIndex);
                         
-                        // If moving between models, remove from source first
-                        if (targetModel !== draggedQuicklinkSourceModel) {
-                            draggedQuicklinkSourceModel.removeUrl(draggedQuicklinkOriginalIndex);
-                            
-                            // If source was popup, update main model
-                            if (draggedQuicklinkSourceModel === popup.mainItem?.popupModel) {
-                                launcherModel.setUrls(draggedQuicklinkSourceModel.urls());
-                            }
-                        }
+                        // Insert at new position
+                        launcherModel.insertUrl(adjustedTargetIndex, url);
+                        // console.log("[DEBUG] After insertion, count:", launcherModel.count);
+                        // console.log("[DEBUG] URLs after move:", JSON.stringify(launcherModel.urls()));
                         
-                        // Move item in the target model
-                        if (toIndex > -1) {
-                            // Remove the item from its original position if in the same model
-                            if (targetModel === draggedQuicklinkSourceModel) {
-                                urls.splice(draggedQuicklinkOriginalIndex, 1);
-                                // Adjust target index if moving forward in the same list
-                                if (toIndex > draggedQuicklinkOriginalIndex) {
-                                    toIndex--;
-                                }
-                            }
-                            
-                            // Insert at new position
-                            urls.splice(toIndex, 0, draggedQuicklink);
-                            
-                            // Update the target model
-                            targetModel.setUrls(urls);
-                            
-                            // If target is popup, update main model
-                            if (targetModel === popup.mainItem?.popupModel) {
-                                launcherModel.setUrls(urls);
-                            }
-                        }
-                        
-                        // Update configuration from main model
+                        // Update configuration
                         plasmoid.configuration.launcherUrls = launcherModel.urls();
+                        // console.log("[DEBUG] Configuration updated");
+                    } else {
+                        // console.log("[DEBUG] Invalid sourceIndex:", sourceIndex, "or out of bounds for count:", launcherModel.count);
+                        console.log("[DEBUG] Invalid sourceIndex:", sourceIndex, "or out of bounds for count:", launcherModel.count);
                     }
                     
-                    // Reset drag state
-                    draggedQuicklink = null;
-                    draggedQuicklinkOriginalIndex = -1;
-                    internalDragInProgress = false;
+                    // Reset internal drag flags
+                    internalDragActive = false;
+                    internalDragSourceIndex = -1;
+                    // console.log("[DEBUG] Internal drag flags reset");
+                    
                     event.accept(Qt.IgnoreAction);
                 }
                 
@@ -258,7 +241,7 @@ PlasmoidItem {
                 visible: count
 
                 onCurrentIndexChanged: {
-                    console.log("[DEBUG] Main GridView currentIndex changed to:", currentIndex);
+                    // console.log("[DEBUG] Main GridView currentIndex changed to:", currentIndex);
                 }
 
                 onFocusChanged: {
@@ -512,10 +495,33 @@ PlasmoidItem {
 
     function saveConfiguration()
     {
-        if (!dragging) {
-            plasmoid.configuration.launcherUrls = launcherModel.urls();
+        plasmoid.configuration.launcherUrls = launcherModel.urls();
+        // Only save popup URLs if popup model exists
+        if (typeof popup !== 'undefined' && popup.popupModel) {
+            plasmoid.configuration.popupUrls = popup.popupModel.urls();
         }
     }
-
-
+    
+    function isInternalDrop(event)
+    {
+        // Check global internal drag flag first
+        if (internalDragActive && internalDragSourceIndex >= 0) {
+            return true;
+        }
+        
+        // Fallback: Check if source is an IconItem with itemIndex (internal drag)
+        if (event.mimeData.source) {
+            // Check if it's an IconItem with itemIndex (internal drag)
+            if (event.mimeData.source.itemIndex !== undefined) {
+                return true;
+            }
+            
+            // Alternative check: if it has GridView property pointing to our grid
+            if (event.mimeData.source.GridView && event.mimeData.source.GridView.view == grid) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
 }
