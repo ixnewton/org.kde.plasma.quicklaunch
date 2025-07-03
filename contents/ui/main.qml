@@ -299,10 +299,6 @@ PlasmoidItem {
             flags: Qt.WindowStaysOnTopHint
             hideOnWindowDeactivate: !suspendPopupClosing
             
-            // Use proper Plasma dialog background system
-            // Dialog backgrounds are designed as complete unified backgrounds (not 4-part like panels)
-            backgroundHints: PlasmaCore.Dialog.StandardBackground
-            
             // Ensure suspendPopupClosing is reset when popup becomes inactive
             onActiveChanged: {
                 if (!active && !dragging) {
@@ -322,32 +318,8 @@ PlasmoidItem {
             // This ensures the popup behaves the same whether opened by click or drag
             onVisibleChanged: {
                 if (visible) {
-                    // Position popup with proper margins to prevent background cropping
-                    var pos = popup.popupPosition(root, Qt.AlignCenter);
-                    
-                    // Add margin to prevent cropping of rounded corners at top
-                    var margin = 8; // Ensure rounded corners are visible
-                    
-                    // Adjust position based on panel location to avoid cropping
-                    switch (plasmoid.location) {
-                        case PlasmaCore.Types.TopEdge:
-                            pos.y += margin; // Move down from top edge
-                            break;
-                        case PlasmaCore.Types.BottomEdge:
-                            pos.y -= margin; // Move up from bottom edge
-                            break;
-                        case PlasmaCore.Types.LeftEdge:
-                            pos.x += margin; // Move right from left edge
-                            break;
-                        case PlasmaCore.Types.RightEdge:
-                            pos.x -= margin; // Move left from right edge
-                            break;
-                    }
-                    
-                    popup.x = pos.x;
-                    popup.y = pos.y;
-                    
-                    console.log("[THEME] Popup positioned at:", pos.x, ",", pos.y, "with margin:", margin);
+                    // Position is handled automatically by PlasmaCore.Dialog
+                    // No manual positioning needed
                     
                     // Debug: Show detected Plasma theme properties
                     console.log("[THEME] Plasma Background Color:", root.themeBackgroundColor);
@@ -387,14 +359,6 @@ PlasmoidItem {
                     console.log("[THEME] Expected SVG paths:");
                     console.log("[THEME]   - dialogs/background.svg (popup background)");
                     console.log("[THEME]   - widgets/panel-background.svg (panel background)");
-                    
-                    // Debug: Show dialog background configuration
-                    console.log("[THEME] === Dialog Background Configuration ===");
-                    console.log("[THEME] Using StandardBackground - Plasma handles outer container styling");
-                    console.log("[THEME] Dialog background: Uses translucent/dialogs/background.svgz (unified background)");
-                    console.log("[THEME] Panel background not suitable: translucent/widgets/panel-background.svgz is 4-part system");
-                    console.log("[THEME] Panel backgrounds: left cap + center stretch + right cap + corners (for panels only)");
-                    console.log("[THEME] Dialog backgrounds: complete unified background (appropriate for popups)");
                     
                     // Try to detect theme information through available properties
                     try {
@@ -474,7 +438,7 @@ PlasmoidItem {
                 width: popupContent.width
                 height: popupContent.height
 
-                QuicklaunchPopup {
+                Popup {
                     id: popupContent
                     anchors.centerIn: parent
                     Keys.onEscapePressed: popup.visible = false

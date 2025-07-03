@@ -7,7 +7,6 @@
 import QtQuick 2.2
 
 import org.kde.kirigami 2.20 as Kirigami
-import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.extras 2.0 as PlasmaExtras
 
 import org.kde.draganddrop 2.0 as DragAndDrop
@@ -25,26 +24,22 @@ Item {
     width: LayoutManager.popupItemWidth()
     height: Math.max(1, popupModel.count) * LayoutManager.popupItemHeight()
     
-    // Translucent dialog-style background with proper rounded corners
+    // Themed background that matches Plasma theme
     Rectangle {
-        id: popupBackground
+        id: themedBackground
         anchors.fill: parent
-        
-        // Mimic translucent dialog background appearance
         color: {
             // Access theme properties from parent (main widget)
             var mainWidget = parent;
             while (mainWidget && !mainWidget.themeBackgroundColor) {
                 mainWidget = mainWidget.parent;
             }
-            return mainWidget ? mainWidget.themeBackgroundColor : PlasmaCore.Theme.backgroundColor;
+            return mainWidget ? mainWidget.themeBackgroundColor : "transparent";
         }
+        opacity: 0.95  // Slightly transparent for visual appeal
+        radius: 4      // Rounded corners
         
-        // Translucent appearance like translucent/dialogs/background.svgz
-        opacity: 0.85  // More translucent to match the SVG style
-        radius: 6      // Slightly larger radius for modern appearance
-        
-        // Subtle border to match dialog appearance
+        // Optional: Add a subtle border
         border.width: 1
         border.color: {
             var mainWidget = parent;
@@ -52,18 +47,9 @@ Item {
                 mainWidget = mainWidget.parent;
             }
             if (mainWidget && mainWidget.themeTextColor) {
-                return Qt.rgba(mainWidget.themeTextColor.r, mainWidget.themeTextColor.g, mainWidget.themeTextColor.b, 0.15);
+                return Qt.rgba(mainWidget.themeTextColor.r, mainWidget.themeTextColor.g, mainWidget.themeTextColor.b, 0.2);
             }
-            return Qt.rgba(1, 1, 1, 0.15); // Fallback to semi-transparent white
-        }
-        
-        // Debug: Log the background approach being used
-        Component.onCompleted: {
-            console.log("[THEME] Using translucent dialog-style Rectangle background");
-            console.log("[THEME] Mimicking: translucent/dialogs/background.svgz appearance");
-            console.log("[THEME] Background color:", color);
-            console.log("[THEME] Opacity:", opacity);
-            console.log("[THEME] Radius:", radius);
+            return "transparent";
         }
     }
 
