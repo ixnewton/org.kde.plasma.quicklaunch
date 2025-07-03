@@ -321,73 +321,75 @@ PlasmoidItem {
                     // Position is handled automatically by PlasmaCore.Dialog
                     // No manual positioning needed
                     
-                    // Debug: Show detected Plasma theme properties
+                    // Debug: Show detected Plasma theme properties (commented out for clean output)
+                    /*
                     console.log("[THEME] Plasma Background Color:", root.themeBackgroundColor);
                     console.log("[THEME] Plasma Text Color:", root.themeTextColor);
                     console.log("[THEME] Plasma Highlight Color:", root.themeHighlightColor);
                     console.log("[THEME] Plasma Button Background:", root.themeButtonBackgroundColor);
                     console.log("[THEME] Color Scheme:", root.themeColorScheme);
                     console.log("[THEME] Dark Mode:", root.themeDarkMode);
+                    */
                     
                     // Debug: Show Plasma Dialog SVG background information
-                    console.log("[THEME] Dialog Type:", popup.type);
-                    console.log("[THEME] Dialog Location:", popup.location);
-                    console.log("[THEME] Dialog Flags:", popup.flags);
-                    if (popup.backgroundHints !== undefined) {
-                        console.log("[THEME] Dialog Background Hints:", popup.backgroundHints);
-                    }
+                    //console.log("[THEME] Dialog Type:", popup.type);
+                    //console.log("[THEME] Dialog Location:", popup.location);
+                    //console.log("[THEME] Dialog Flags:", popup.flags);
+                    //if (popup.backgroundHints !== undefined) {
+                    //    console.log("[THEME] Dialog Background Hints:", popup.backgroundHints);
+                    //}
                     
                     // Try to access internal background SVG if available
-                    if (popup.children && popup.children.length > 0) {
-                        for (var i = 0; i < popup.children.length; i++) {
-                            var child = popup.children[i];
-                            console.log("[THEME] Dialog Child", i, ":", child.toString());
-                            if (child.imagePath !== undefined) {
-                                console.log("[THEME] SVG Image Path:", child.imagePath);
-                            }
-                            if (child.prefix !== undefined) {
-                                console.log("[THEME] SVG Prefix:", child.prefix);
-                            }
-                        }
-                    }
+                    //if (popup.children && popup.children.length > 0) {
+                    //    for (var i = 0; i < popup.children.length; i++) {
+                    //        var child = popup.children[i];
+                    //        console.log("[THEME] Dialog Child", i, ":", child.toString());
+                    //        if (child.imagePath !== undefined) {
+                    //            console.log("[THEME] SVG Image Path:", child.imagePath);
+                    //        }
+                    //        if (child.prefix !== undefined) {
+                    //            console.log("[THEME] SVG Prefix:", child.prefix);
+                    //        }
+                    //    }
+                    //}
                     
                     // Debug: Show alternative SVG background information
-                    console.log("[THEME] === SVG Background Debug (Alternative Method) ===");
+                    //console.log("[THEME] === SVG Background Debug (Alternative Method) ===");
                     
                     // Show what we can detect from the Dialog itself
-                    console.log("[THEME] Dialog uses PopupMenu type - likely uses dialogs/background SVG");
-                    console.log("[THEME] Expected SVG paths:");
-                    console.log("[THEME]   - dialogs/background.svg (popup background)");
-                    console.log("[THEME]   - widgets/panel-background.svg (panel background)");
+                    //console.log("[THEME] Dialog uses PopupMenu type - likely uses dialogs/background SVG");
+                    //console.log("[THEME] Expected SVG paths:");
+                    //console.log("[THEME]   - dialogs/background.svg (popup background)");
+                    //console.log("[THEME]   - widgets/panel-background.svg (panel background)");
                     
                     // Try to detect theme information through available properties
-                    try {
-                        // Check if we can access theme through global objects
-                        if (typeof theme !== 'undefined') {
-                            console.log("[THEME] Global theme object available:", theme);
-                            if (theme.themeName) {
-                                console.log("[THEME] Current theme name:", theme.themeName);
-                            }
-                        }
+                    //try {
+                    //    // Check if we can access theme through global objects
+                    //    if (typeof theme !== 'undefined') {
+                    //        console.log("[THEME] Global theme object available:", theme);
+                    //        if (theme.themeName) {
+                    //            console.log("[THEME] Current theme name:", theme.themeName);
+                    //        }
+                    //    }
                         
-                        // Check plasmoid theme information
-                        if (plasmoid.theme) {
-                            console.log("[THEME] Plasmoid theme available:", plasmoid.theme);
-                        }
+                    //    // Check plasmoid theme information
+                    //    if (plasmoid.theme) {
+                    //        console.log("[THEME] Plasmoid theme available:", plasmoid.theme);
+                    //    }
                         
-                        // Show what type of background the dialog should be using
-                        console.log("[THEME] Dialog type suggests SVG background:");
-                        console.log("[THEME]   - Type:", popup.type, "(PopupMenu = themed background)");
-                        console.log("[THEME]   - Location:", popup.location, "(affects SVG orientation)");
+                    //    // Show what type of background the dialog should be using
+                    //    console.log("[THEME] Dialog type suggests SVG background:");
+                    //    console.log("[THEME]   - Type:", popup.type, "(PopupMenu = themed background)");
+                    //    console.log("[THEME]   - Location:", popup.location, "(affects SVG orientation)");
                         
-                        // Estimate theme file locations based on common Plasma paths
-                        console.log("[THEME] Likely SVG file locations:");
-                        console.log("[THEME]   - ~/.local/share/plasma/desktoptheme/[theme]/dialogs/background.svg");
-                        console.log("[THEME]   - /usr/share/plasma/desktoptheme/[theme]/dialogs/background.svg");
+                    //    // Estimate theme file locations based on common Plasma paths
+                    //    console.log("[THEME] Likely SVG file locations:");
+                    //    console.log("[THEME]   - ~/.local/share/plasma/desktoptheme/[theme]/dialogs/background.svg");
+                    //    console.log("[THEME]   - /usr/share/plasma/desktoptheme/[theme]/dialogs/background.svg");
                         
-                    } catch (e) {
-                        console.log("[THEME] Error accessing theme info:", e);
-                    }
+                    //} catch (e) {
+                    //    console.log("[THEME] Error accessing theme info:", e);
+                    //}
                 }
             }
 
