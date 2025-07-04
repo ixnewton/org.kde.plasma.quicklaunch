@@ -236,44 +236,12 @@ Item {
             onClicked: function(mouse) {
                 // console.log("[DEBUG] IconItem", itemIndex, "onClicked - button:", mouse.button, "(Left:", Qt.LeftButton, ")");
                 if (mouse.button == Qt.LeftButton) {
-                    // Left click now toggles selection instead of opening URL
-                    // console.log("[DEBUG] IconItem", itemIndex, "left-click detected, toggling selection");
-                    var currentIndex = -1;
-                    if (iconItem.ListView.view) {
-                        currentIndex = iconItem.ListView.view.currentIndex;
-                    } else if (iconItem.GridView.view) {
-                        currentIndex = iconItem.GridView.view.currentIndex;
-                    }
-                    
-                    if (currentIndex === iconItem.itemIndex) {
-                        // Currently selected - deselect by setting to -1
-                        // console.log("[DEBUG] IconItem", itemIndex, "deselecting (was selected)");
-                        if (iconItem.ListView.view) {
-                            iconItem.ListView.view.currentIndex = -1;
-                        }
-                        if (iconItem.GridView.view) {
-                            iconItem.GridView.view.currentIndex = -1;
-                        }
-                    } else {
-                        // Not currently selected - select this item
-                        // console.log("[DEBUG] IconItem", itemIndex, "selecting (was not selected)");
-                        if (iconItem.ListView.view) {
-                            iconItem.ListView.view.currentIndex = iconItem.itemIndex;
-                        }
-                        if (iconItem.GridView.view) {
-                            iconItem.GridView.view.currentIndex = iconItem.itemIndex;
-                        }
-                    }
-                }
-            }
-            
-            onDoubleClicked: function(mouse) {
-                // Double-click opens the URL (moved from single click)
-                if (mouse.button == Qt.LeftButton) {
-                    // console.log("[DEBUG] IconItem", itemIndex, "double-click detected, opening URL:", url);
+                    // Left click launches the quicklink
+                    // console.log("[DEBUG] IconItem", itemIndex, "left-click detected, launching URL:", url);
                     logic.openUrl(url);
                 }
             }
+
 
             Kirigami.Icon {
                 id: icon
