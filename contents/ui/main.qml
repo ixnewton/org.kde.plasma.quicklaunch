@@ -115,7 +115,7 @@ PlasmoidItem {
                                        (event.mimeData.hasUrls && !internalDragActive);
                     
                     if (shouldShowPopup) {
-                        if (!popup.visible) {
+                        if (popup && !popup.visible) {
                             // Open popup the same way as clicking the arrow
                             if (popupArrowMouseArea && typeof popupArrowMouseArea.togglePopup === 'function') {
                                 popupArrowMouseArea.togglePopup();
@@ -128,7 +128,9 @@ PlasmoidItem {
                                 popupLockTimer.restart();
                             }
                         }
-                        event.accept();
+                        if (event.accept) {
+                            event.accept();
+                        }
                     }
                 } catch (e) {
                     // console.error("Error in dragMove handler:", e);
@@ -218,8 +220,13 @@ PlasmoidItem {
                             // Add to main widget
                             launcherModel.insertUrl(targetIndex, url);
                             
-                            // Remove from popup
+                            // Remove from popup and update configuration
                             popup.popupModel.removeUrl(sourceIndex);
+                            
+                            // Force update the popup display
+                            if (popup.listView && popup.listView.model) {
+                                popup.listView.model.urlsChanged();
+                            }
                             
                             // Save configurations
                             saveConfiguration();
@@ -227,7 +234,14 @@ PlasmoidItem {
                                 popup.saveConfiguration();
                             }
                             
+<<<<<<< HEAD
                             // console.log('[MAIN-DRAG] Item moved from popup to main widget');
+=======
+                            // Ensure popup URLs are updated immediately
+                            plasmoid.configuration.popupUrls = popup.popupModel.urls();
+                            
+                            console.log('[MAIN-DRAG] Item moved from popup to main widget');
+>>>>>>> 70e8766 (fix: handle drag state cleanup and improve popup drag-and-drop reliability in quicklaunch widget)
                         }
                     } else {
                         // Handle internal reordering within main widget
@@ -322,18 +336,13 @@ PlasmoidItem {
                 model: ListModel {
                     id: displayModel
                     
-                    // Source model is launcherModel
-                    property var sourceModel: UrlModel {
-                        id: launcherModel
-                        onCountChanged: displayModel.updateDisplay()
-                        onDataChanged: displayModel.updateDisplay()
+                    Component.onCompleted: {
+                        updateDisplay();
                     }
                     
-                    // Update the display model based on the source model
                     function updateDisplay() {
                         clear();
                         if (enablePopup && launcherModel.count > 0) {
-                            // In popup mode, only show the first item
                             var urls = launcherModel.urls();
                             if (urls.length > 0) {
                                 append({"url": urls[0]});
@@ -346,6 +355,16 @@ PlasmoidItem {
                             }
                         }
                     }
+                    
+                    // Source model is launcherModel
+                    property var sourceModel: UrlModel {
+                        id: launcherModel
+                        onCountChanged: displayModel.updateDisplay()
+                        onDataChanged: displayModel.updateDisplay()
+                    }
+                    
+                    // Update the display model based on the source model
+                    // This is handled by the updateDisplay function above
                 }
 
                 delegate: IconItem { }
@@ -481,7 +500,7 @@ PlasmoidItem {
             // Manual positioning is required to apply a pixel offset.
             // The 'location' and 'visualParent' properties do not support this.
             x: {
-                if (!popup || !root) return 0;
+                if (!popup || !root || !root.width) return 0;
                 
                 if (root.onLeftOrRightPanel) {
                     if (plasmoid.location == PlasmaCore.Types.LeftEdge) {
@@ -490,7 +509,7 @@ PlasmoidItem {
                     } else { // RightEdge
                         // Position left of the panel, with a 10px margin
                         // Use a default width if popup.width is not available yet
-                        var popupWidth = popup.width || 200; // Default width if not available
+                        var popupWidth = (popup && popup.width) ? popup.width : 200; // Default width if not available
                         return root.mapToGlobal(0, 0).x - popupWidth - 10;
                     }
                 }
@@ -651,7 +670,7 @@ PlasmoidItem {
             displayModel.sourceModel.setUrls(plasmoid.configuration.launcherUrls);
             displayModel.sourceModel.urlsChanged.connect(saveConfiguration);
             // Update the display model
-            displayModel.updateModel();
+            displayModel.updateDisplay();
         }
     }
 
@@ -668,7 +687,7 @@ PlasmoidItem {
         displayModel.sourceModel.setUrls(plasmoid.configuration.launcherUrls);
         displayModel.sourceModel.urlsChanged.connect(saveConfiguration);
         // Update the display model
-        displayModel.updateModel();
+        displayModel.updateDisplay();
     }
 
     function saveConfiguration()

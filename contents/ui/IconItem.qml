@@ -174,6 +174,16 @@ Item {
                     popup.internalDragActive = true;
                     popup.internalDragSourceIndex = iconItem.itemIndex;
                     console.log("[DEBUG] Popup drag flags set - sourceIndex:", iconItem.itemIndex);
+                    
+                    // Connect to drag.active changes to clean up when drag ends
+                    drag.activeChanged.connect(function() {
+                        if (!drag.active) {
+                            console.log("[DEBUG] Popup drag ended - cleaning up state");
+                            popup.internalDragActive = false;
+                            popup.internalDragSourceIndex = -1;
+                            dragging = false;
+                        }
+                    });
                 }
             } else if (!isPopupItem && iconItem.GridView && iconItem.GridView.view) {
                 // Handle main widget item drag - find root widget
@@ -185,6 +195,16 @@ Item {
                     rootWidget.internalDragActive = true;
                     rootWidget.internalDragSourceIndex = iconItem.itemIndex;
                     console.log("[DEBUG] Main widget drag flags set - sourceIndex:", iconItem.itemIndex);
+                    
+                    // Connect to drag.active changes to clean up when drag ends
+                    drag.activeChanged.connect(function() {
+                        if (!drag.active) {
+                            console.log("[DEBUG] Main widget drag ended - cleaning up state");
+                            rootWidget.internalDragActive = false;
+                            rootWidget.internalDragSourceIndex = -1;
+                            dragging = false;
+                        }
+                    });
                 } else {
                     console.log("[DEBUG] Could not find root widget for main item drag");
                 }

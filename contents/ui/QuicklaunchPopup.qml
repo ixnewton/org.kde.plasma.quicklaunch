@@ -280,7 +280,10 @@ Item {
         
         // Fallback: Check if source is an IconItem from our popup
         if (event.mimeData.source) {
+            // Check if it's from our popup by checking the isPopupItem property
+            return event.mimeData.source.isPopupItem === true;
+        }
         
-        return isInternal;
+        return false;
     }
 }
