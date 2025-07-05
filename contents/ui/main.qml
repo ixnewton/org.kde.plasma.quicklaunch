@@ -53,6 +53,14 @@ PlasmoidItem {
     // Internal drag tracking (same as popup)
     property bool internalDragActive: false
     property int internalDragSourceIndex: -1
+    
+    // Debug function for drag operations
+    function logDragState(message) {
+        console.log(`[MAIN-DRAG] ${message} -`,
+                  `dragActive:${internalDragActive},`,
+                  `sourceIndex:${internalDragSourceIndex},`,
+                  `popupActive:${popup ? popup.visible : 'no popup'}`);
+    }
 
     readonly property bool onTopOrBottomPanel: horizontal && (plasmoid.location == PlasmaCore.Types.TopEdge || plasmoid.location == PlasmaCore.Types.BottomEdge)
 
@@ -91,24 +99,38 @@ PlasmoidItem {
             }
 
             onDragMove: function(event) {
+                if (!event || !event.mimeData) {
+                    console.error("Invalid drag move event");
+                    return;
+                }
+                
                 // Ensure dragging state is maintained
                 dragging = true;
                 
-                // Show popup when dragging over arrow or when dragging external URLs
-                var shouldShowPopup = (root.childAt(event.x, event.y) == popupArrow) || 
-                                   (event.mimeData.hasUrls && !internalDragActive);
-                
-                if (shouldShowPopup) {
-                    if (!popup.visible) {
-                        // Open popup the same way as clicking the arrow
-                        popupArrowMouseArea.togglePopup();
+                try {
+                    // Show popup when dragging over arrow or when dragging external URLs
+                    var targetItem = root.childAt(event.x, event.y);
+                    var shouldShowPopup = (targetItem == popupArrow) || 
+                                       (event.mimeData.hasUrls && !internalDragActive);
+                    
+                    if (shouldShowPopup) {
+                        if (!popup.visible) {
+                            // Open popup the same way as clicking the arrow
+                            if (popupArrowMouseArea && typeof popupArrowMouseArea.togglePopup === 'function') {
+                                popupArrowMouseArea.togglePopup();
+                            }
+                        }
+                        // Restart timer to keep popup locked for external drags
+                        if (event.mimeData.hasUrls && !internalDragActive) {
+                            suspendPopupClosing = true;
+                            if (popupLockTimer) {
+                                popupLockTimer.restart();
+                            }
+                        }
+                        event.accept();
                     }
-                    // Restart timer to keep popup locked for external drags
-                    if (event.mimeData.hasUrls && !internalDragActive) {
-                        suspendPopupClosing = true;
-                        popupLockTimer.restart();
-                    }
-                    event.accept();
+                } catch (e) {
+                    console.error("Error in dragMove handler:", e);
                 }
             }
 
@@ -119,6 +141,11 @@ PlasmoidItem {
             }
 
             onDrop: function(event) {
+                if (!event) {
+                    console.error("Drop event is undefined");
+                    return;
+                }
+                
                 dragging = false;
                 // Stop timer and immediately resume normal popup closing
                 popupLockTimer.stop();
@@ -135,77 +162,108 @@ PlasmoidItem {
 
                 if (event.mimeData.hasUrls && !isInternalDrop(event)) {
                     // console.log("[DEBUG] Main widget handling external URL drop");
-                    // Handle external URL drop on main area
-                    var index = grid.indexAt(event.x, event.y);
-                    if (index === -1) index = launcherModel.count;
                     
-                    // console.log("[DEBUG] External URLs:", event.mimeData.urls, "inserting at index:", index);
-                    // console.log("[DEBUG] URLs before external drop:", JSON.stringify(launcherModel.urls()));
-                    
-                    launcherModel.insertUrls(index, event.mimeData.urls);
-                    
-                    // console.log("[DEBUG] URLs after external drop:", JSON.stringify(launcherModel.urls()));
-                    // console.log("[DEBUG] New model count:", launcherModel.count);
+                    // In popup mode, always replace the first item
+                    if (enablePopup && launcherModel.count > 0) {
+                        // Replace the first URL
+                        if (event.mimeData.urls.length > 0) {
+                            // Remove the first item
+                            launcherModel.removeUrl(0);
+                            // Insert the new URL at the beginning
+                            launcherModel.insertUrl(0, event.mimeData.urls[0]);
+                            // Save configuration
+                            saveConfiguration();
+                        }
+                    } else {
+                        // Normal mode behavior - insert at drop position
+                        var index = grid.indexAt(event.x, event.y);
+                        if (index === -1) index = launcherModel.count;
+                        launcherModel.insertUrls(index, event.mimeData.urls);
+                    }
                     
                     // Show popup after dropping external URLs if not already visible
                     if (!popup.visible) {
                         popup.visible = true;
-                        // console.log("[DEBUG] Popup opened after external drop");
                     }
                     
                     // Ensure normal popup closing behavior is restored after drop
                     Qt.callLater(function() {
                         dragging = false;
-                        // console.log("[DEBUG] Dragging state reset after external drop");
                     });
                     return;
                 }
 
                 if (isInternalDrop(event)) {
-                    // Use same logic as popup for internal drops
-                    var sourceIndex = internalDragSourceIndex >= 0 ? internalDragSourceIndex : (event.mimeData.source ? event.mimeData.source.itemIndex : -1);
-                    var targetIndex = grid.indexAt(event.x, event.y);
+                    // Check if this is a cross-widget drag (from popup to main)
+                    const isFromPopup = event.mimeData.source && event.mimeData.source.isPopupItem === true;
+                    const sourceIndex = isFromPopup ? 
+                        (event.mimeData.source ? event.mimeData.source.itemIndex : -1) :
+                        (internalDragSourceIndex >= 0 ? internalDragSourceIndex : -1);
+                        
+                    let targetIndex = grid.indexAt(event.x, event.y);
                     if (targetIndex === -1) targetIndex = launcherModel.count;
                     
-                    // console.log("[DEBUG] Main widget internal drop - sourceIndex:", sourceIndex, "targetIndex:", targetIndex, "modelCount:", launcherModel.count);
+                    logDragState(`Internal drop - isFromPopup:${isFromPopup}, sourceIndex:${sourceIndex}, targetIndex:${targetIndex}`);
                     
-                    if (sourceIndex >= 0 && sourceIndex < launcherModel.count) {
-                        // Get the URL being moved
-                        var urlsArray = launcherModel.urls();
-                        var url = urlsArray[sourceIndex];
-                        
-                        // console.log("[DEBUG] Moving URL:", url, "from index:", sourceIndex, "to target:", targetIndex);
-                        // console.log("[DEBUG] URLs before move:", JSON.stringify(urlsArray));
-                        
-                        // Remove from original position first
-                        launcherModel.removeUrl(sourceIndex);
-                        // console.log("[DEBUG] After removal, count:", launcherModel.count);
-                        
-                        // Adjust target index if removing from before target
-                        var adjustedTargetIndex = targetIndex;
-                        if (sourceIndex < targetIndex) {
-                            adjustedTargetIndex = targetIndex - 1;
+                    if (isFromPopup) {
+                        // Handle drop from popup to main widget
+                        if (popup && popup.popupModel && sourceIndex >= 0 && sourceIndex < popup.popupModel.count) {
+                            // Get the URL from popup
+                            const popupUrls = popup.popupModel.urls();
+                            const url = popupUrls[sourceIndex];
+                            
+                            console.log(`[MAIN-DRAG] Moving item from popup[${sourceIndex}] to main[${targetIndex}]: ${url}`);
+                            
+                            // Add to main widget
+                            launcherModel.insertUrl(targetIndex, url);
+                            
+                            // Remove from popup
+                            popup.popupModel.removeUrl(sourceIndex);
+                            
+                            // Save configurations
+                            saveConfiguration();
+                            if (popup.saveConfiguration) {
+                                popup.saveConfiguration();
+                            }
+                            
+                            console.log('[MAIN-DRAG] Item moved from popup to main widget');
                         }
-                        
-                        // console.log("[DEBUG] Adjusted target index:", adjustedTargetIndex);
-                        
-                        // Insert at new position
-                        launcherModel.insertUrl(adjustedTargetIndex, url);
-                        // console.log("[DEBUG] After insertion, count:", launcherModel.count);
-                        // console.log("[DEBUG] URLs after move:", JSON.stringify(launcherModel.urls()));
-                        
-                        // Update configuration
-                        plasmoid.configuration.launcherUrls = launcherModel.urls();
-                        // console.log("[DEBUG] Configuration updated");
                     } else {
-                        // console.log("[DEBUG] Invalid sourceIndex:", sourceIndex, "or out of bounds for count:", launcherModel.count);
-                        console.log("[DEBUG] Invalid sourceIndex:", sourceIndex, "or out of bounds for count:", launcherModel.count);
+                        // Handle internal reordering within main widget
+                        if (sourceIndex >= 0 && sourceIndex < launcherModel.count) {
+                            // Get the URL being moved
+                            const urlsArray = launcherModel.urls();
+                            const url = urlsArray[sourceIndex];
+                            
+                            console.log(`[MAIN-DRAG] Reordering main widget: ${sourceIndex} -> ${targetIndex}`);
+                            
+                            // Remove from original position
+                            launcherModel.removeUrl(sourceIndex);
+                            
+                            // Adjust target index if removing from before target
+                            let adjustedTargetIndex = targetIndex;
+                            if (sourceIndex < targetIndex) {
+                                adjustedTargetIndex = targetIndex - 1;
+                            }
+                            
+                            // Insert at new position
+                            launcherModel.insertUrl(adjustedTargetIndex, url);
+                            
+                            // Update configuration
+                            saveConfiguration();
+                            
+                            console.log('[MAIN-DRAG] Main widget reordered');
+                        } else {
+                            console.error(`[MAIN-DRAG] Invalid sourceIndex: ${sourceIndex}, count: ${launcherModel.count}`);
+                        }
                     }
                     
-                    // Reset internal drag flags
-                    internalDragActive = false;
-                    internalDragSourceIndex = -1;
-                    // console.log("[DEBUG] Internal drag flags reset");
+                    // Reset internal drag flags if this was a main widget drag
+                    if (!isFromPopup) {
+                        internalDragActive = false;
+                        internalDragSourceIndex = -1;
+                        console.log('[MAIN-DRAG] Reset main widget drag state');
+                    }
                     
                     event.accept(Qt.IgnoreAction);
                 }
@@ -260,8 +318,33 @@ PlasmoidItem {
                     console.log("[DEBUG] Main GridView focus changed to:", focus);
                 }
 
-                model: UrlModel {
-                    id: launcherModel
+                model: ListModel {
+                    id: displayModel
+                    
+                    // Source model is launcherModel
+                    property var sourceModel: UrlModel {
+                        id: launcherModel
+                        onCountChanged: displayModel.updateDisplay()
+                        onDataChanged: displayModel.updateDisplay()
+                    }
+                    
+                    // Update the display model based on the source model
+                    function updateDisplay() {
+                        clear();
+                        if (enablePopup && launcherModel.count > 0) {
+                            // In popup mode, only show the first item
+                            var urls = launcherModel.urls();
+                            if (urls.length > 0) {
+                                append({"url": urls[0]});
+                            }
+                        } else {
+                            // In normal mode, show all items
+                            var allUrls = launcherModel.urls();
+                            for (var i = 0; i < allUrls.length; i++) {
+                                append({"url": allUrls[i]});
+                            }
+                        }
+                    }
                 }
 
                 delegate: IconItem { }
@@ -396,26 +479,32 @@ PlasmoidItem {
             // Manual positioning is required to apply a pixel offset.
             // The 'location' and 'visualParent' properties do not support this.
             x: {
+                if (!popup || !root) return 0;
+                
                 if (root.onLeftOrRightPanel) {
                     if (plasmoid.location == PlasmaCore.Types.LeftEdge) {
                         // Position right of the panel, with a 10px margin
                         return root.mapToGlobal(root.width, 0).x + 10;
                     } else { // RightEdge
                         // Position left of the panel, with a 10px margin
-                        return root.mapToGlobal(0, 0).x - popup.width - 10;
+                        // Use a default width if popup.width is not available yet
+                        var popupWidth = popup.width || 200; // Default width if not available
+                        return root.mapToGlobal(0, 0).x - popupWidth - 10;
                     }
                 }
+                
                 // Default for top/bottom panels
-                // If the popup is on the left of the panel and no greater than the width of the popup, position it 8px from the edge of the screen. 
-                // If the popup is on the right of the panel and no greater than the width of the popup from the right edge of the screen, position it 8px from the right edge of the screen. 
-                // Else position it centered on the popupArrow.
+                if (!popupArrow || !popupArrow.width) return 0;
+                
                 var arrowGlobalX = root.mapToGlobal(popupArrow.x, 0).x;
-                var centeredX = arrowGlobalX + (popupArrow.width / 2) - (popup.width / 2);
+                var popupWidth = popup.width || 200; // Default width if not available
+                var centeredX = arrowGlobalX + (popupArrow.width / 2) - (popupWidth / 2);
+                var screenWidth = plasmoid.screenGeometry ? plasmoid.screenGeometry.width : 800; // Fallback width
 
                 if (centeredX < 8) {
                     return 8;
-                } else if (centeredX + popup.width > plasmoid.screenGeometry.width - 8) {
-                    return plasmoid.screenGeometry.width - popup.width - 8;
+                } else if (centeredX + popupWidth > screenWidth - 8) {
+                    return screenWidth - popupWidth - 8;
                 } else {
                     return centeredX;
                 }
@@ -555,10 +644,12 @@ PlasmoidItem {
 
     Connections {
         target: plasmoid.configuration
-       function onLauncherUrlsChanged() {
-            launcherModel.urlsChanged.disconnect(saveConfiguration);
-            launcherModel.setUrls(plasmoid.configuration.launcherUrls);
-            launcherModel.urlsChanged.connect(saveConfiguration);
+        function onLauncherUrlsChanged() {
+            displayModel.sourceModel.urlsChanged.disconnect(saveConfiguration);
+            displayModel.sourceModel.setUrls(plasmoid.configuration.launcherUrls);
+            displayModel.sourceModel.urlsChanged.connect(saveConfiguration);
+            // Update the display model
+            displayModel.updateModel();
         }
     }
 
@@ -571,13 +662,18 @@ PlasmoidItem {
     ]
 
     Component.onCompleted: {
-        launcherModel.setUrls(plasmoid.configuration.launcherUrls);
-        launcherModel.urlsChanged.connect(saveConfiguration);
+        // Initialize the source model with launcher URLs
+        displayModel.sourceModel.setUrls(plasmoid.configuration.launcherUrls);
+        displayModel.sourceModel.urlsChanged.connect(saveConfiguration);
+        // Update the display model
+        displayModel.updateModel();
     }
 
     function saveConfiguration()
     {
-        plasmoid.configuration.launcherUrls = launcherModel.urls();
+        // Always save the full launcher model, not the display model
+        plasmoid.configuration.launcherUrls = displayModel.sourceModel.urls();
+        
         // Only save popup URLs if popup model exists
         if (typeof popup !== 'undefined' && popup.popupModel) {
             plasmoid.configuration.popupUrls = popup.popupModel.urls();

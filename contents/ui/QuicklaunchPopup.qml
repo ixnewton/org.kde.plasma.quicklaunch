@@ -21,6 +21,14 @@ Item {
     property alias listView: listView
     property bool internalDragActive: false
     property int internalDragSourceIndex: -1
+    
+    // Debug function for drag operations
+    function logDragState(message) {
+        console.log(`[POPUP-DRAG] ${message} -`,
+                  `dragActive:${internalDragActive},`,
+                  `sourceIndex:${internalDragSourceIndex},`,
+                  `itemCount:${popupModel ? popupModel.count : 0}`);
+    }
 
     width: LayoutManager.popupItemWidth()
     height: Math.max(1, popupModel.count) * LayoutManager.popupItemHeight()
@@ -121,29 +129,73 @@ Item {
                 mainWidget.suspendPopupClosing = false;
             }
 
-            if (isInternalDrop(event)) {
-                // Use global sourceIndex if available, fallback to event source
-                var sourceIndex = internalDragSourceIndex >= 0 ? internalDragSourceIndex : (event.mimeData.source ? event.mimeData.source.itemIndex : -1);
-                var targetIndex = listView.indexAt(event.x, event.y);
+            // Check if this is a cross-widget drag (from main to popup)
+            const isFromMain = event.mimeData.source && event.mimeData.source.isPopupItem === false;
+            let sourceIndex = -1;
+            
+            if (isFromMain) {
+                // Handle drag from main widget to popup
+                sourceIndex = event.mimeData.source ? event.mimeData.source.itemIndex : -1;
+                const targetIndex = listView.indexAt(event.x, event.y) !== -1 ? 
+                                   listView.indexAt(event.x, event.y) : popupModel.count;
+                
+                logDragState(`Drop from main[${sourceIndex}] to popup[${targetIndex}]`);
+                
+                if (mainWidget && mainWidget.launcherModel && sourceIndex >= 0 && sourceIndex < mainWidget.launcherModel.count) {
+                    // Get the URL from main widget
+                    const mainUrls = mainWidget.launcherModel.urls();
+                    const url = mainUrls[sourceIndex];
+                    
+                    console.log(`[POPUP-DRAG] Moving item from main[${sourceIndex}] to popup[${targetIndex}]: ${url}`);
+                    
+                    // Add to popup
+                    popupModel.insertUrl(targetIndex, url);
+                    
+                    // Remove from main widget
+                    mainWidget.launcherModel.removeUrl(sourceIndex);
+                    
+                    // Save configurations
+                    saveConfiguration();
+                    if (mainWidget.saveConfiguration) {
+                        mainWidget.saveConfiguration();
+                    }
+                    
+                    console.log('[POPUP-DRAG] Item moved from main to popup');
+                }
+                
+                event.accept(Qt.IgnoreAction);
+            } else if (isInternalDrop(event)) {
+                // Handle internal reordering within popup
+                sourceIndex = internalDragSourceIndex >= 0 ? 
+                    internalDragSourceIndex : 
+                    (event.mimeData.source ? event.mimeData.source.itemIndex : -1);
+                    
+                let targetIndex = listView.indexAt(event.x, event.y);
                 if (targetIndex === -1) targetIndex = popupModel.count;
+                
+                logDragState(`Internal reorder: ${sourceIndex} -> ${targetIndex}`);
                 
                 if (sourceIndex >= 0 && sourceIndex < popupModel.count) {
                     // Get the URL being moved
-                    var urlsArray = popupModel.urls();
-                    var url = urlsArray[sourceIndex];
+                    const urlsArray = popupModel.urls();
+                    const url = urlsArray[sourceIndex];
                     
-                    // Remove from original position first
+                    // Remove from original position
                     popupModel.removeUrl(sourceIndex);
                     
                     // Adjust target index if removing from before target
-                    var adjustedTargetIndex = targetIndex;
+                    let adjustedTargetIndex = targetIndex;
                     if (sourceIndex < targetIndex) {
                         adjustedTargetIndex = targetIndex - 1;
                     }
                     
                     // Insert at new position
                     popupModel.insertUrl(adjustedTargetIndex, url);
+                    
+                    // Save configuration
                     saveConfiguration();
+                    
+                    console.log('[POPUP-DRAG] Popup reordered');
                 }
                 
                 // Reset internal drag flags
@@ -152,19 +204,22 @@ Item {
                 
                 event.accept(Qt.IgnoreAction);
             } else if (event.mimeData.hasUrls) {
-                console.log("Processing external URL drop");
-                var index = listView.indexAt(event.x, event.y);
+                // Handle external URL drop
+                console.log("[POPUP-DRAG] Processing external URL drop");
+                const index = listView.indexAt(event.x, event.y);
+                const targetIndex = index === -1 ? popupModel.count : index;
                 
-                popupModel.insertUrls(index == -1 ? popupModel.count : index, event.mimeData.urls);
+                popupModel.insertUrls(targetIndex, event.mimeData.urls);
                 event.accept(event.proposedAction);
-                console.log("URLs inserted, new count:", popupModel.count);
+                
+                // Save configuration
+                saveConfiguration();
+                
+                console.log(`[POPUP-DRAG] URLs inserted at ${targetIndex}, new count:`, popupModel.count);
             } else {
-                console.log("Drop event not handled - no URLs or unrecognized format");
+                console.log("[POPUP-DRAG] Drop event not handled - no URLs or unrecognized format");
                 event.ignore();
             }
-            
-            // Save configuration after any drop operation
-            saveConfiguration();
         }
     }
 
@@ -224,17 +279,7 @@ Item {
         
         // Fallback: Check if source is an IconItem from our popup
         if (event.mimeData.source) {
-            // Check if it's an IconItem with itemIndex (internal drag)
-            if (event.mimeData.source.itemIndex !== undefined) {
-                return true;
-            }
-            
-            // Alternative check: if it has ListView property pointing to our listView
-            if (event.mimeData.source.ListView && event.mimeData.source.ListView.view == listView) {
-                return true;
-            }
-        }
         
-        return false;
+        return isInternal;
     }
 }
