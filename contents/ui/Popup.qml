@@ -138,14 +138,14 @@ Item {
                 
                 event.accept(Qt.IgnoreAction);
             } else if (event.mimeData.hasUrls) {
-                console.log("Processing external URL drop");
+                // console.log("Processing external URL drop");
                 var index = listView.indexAt(event.x, event.y);
                 
                 popupModel.insertUrls(index == -1 ? popupModel.count : index, event.mimeData.urls);
                 event.accept(event.proposedAction);
-                console.log("URLs inserted, new count:", popupModel.count);
+                // console.log("URLs inserted, new count:", popupModel.count);
             } else {
-                console.log("Drop event not handled - no URLs or unrecognized format");
+                // console.log("Drop event not handled - no URLs or unrecognized format");
                 event.ignore();
             }
             

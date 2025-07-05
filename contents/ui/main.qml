@@ -54,12 +54,13 @@ PlasmoidItem {
     property bool internalDragActive: false
     property int internalDragSourceIndex: -1
     
-    // Debug function for drag operations
+    // Drag operations logging disabled
     function logDragState(message) {
-        console.log(`[MAIN-DRAG] ${message} -`,
-                  `dragActive:${internalDragActive},`,
-                  `sourceIndex:${internalDragSourceIndex},`,
-                  `popupActive:${popup ? popup.visible : 'no popup'}`);
+        // Debug logging disabled
+        // console.log(`[MAIN-DRAG] ${message} -`,
+        //           `dragActive:${internalDragActive},`,
+        //           `sourceIndex:${internalDragSourceIndex},`,
+        //           `popupActive:${popup ? popup.visible : 'no popup'}`);
     }
 
     readonly property bool onTopOrBottomPanel: horizontal && (plasmoid.location == PlasmaCore.Types.TopEdge || plasmoid.location == PlasmaCore.Types.BottomEdge)
@@ -100,7 +101,7 @@ PlasmoidItem {
 
             onDragMove: function(event) {
                 if (!event || !event.mimeData) {
-                    console.error("Invalid drag move event");
+                    // console.error("Invalid drag move event");
                     return;
                 }
                 
@@ -130,7 +131,7 @@ PlasmoidItem {
                         event.accept();
                     }
                 } catch (e) {
-                    console.error("Error in dragMove handler:", e);
+                    // console.error("Error in dragMove handler:", e);
                 }
             }
 
@@ -142,7 +143,7 @@ PlasmoidItem {
 
             onDrop: function(event) {
                 if (!event) {
-                    console.error("Drop event is undefined");
+                    // console.error("Drop event is undefined");
                     return;
                 }
                 
@@ -212,7 +213,7 @@ PlasmoidItem {
                             const popupUrls = popup.popupModel.urls();
                             const url = popupUrls[sourceIndex];
                             
-                            console.log(`[MAIN-DRAG] Moving item from popup[${sourceIndex}] to main[${targetIndex}]: ${url}`);
+                            // console.log(`[MAIN-DRAG] Moving item from popup[${sourceIndex}] to main[${targetIndex}]: ${url}`);
                             
                             // Add to main widget
                             launcherModel.insertUrl(targetIndex, url);
@@ -226,7 +227,7 @@ PlasmoidItem {
                                 popup.saveConfiguration();
                             }
                             
-                            console.log('[MAIN-DRAG] Item moved from popup to main widget');
+                            // console.log('[MAIN-DRAG] Item moved from popup to main widget');
                         }
                     } else {
                         // Handle internal reordering within main widget
@@ -235,7 +236,7 @@ PlasmoidItem {
                             const urlsArray = launcherModel.urls();
                             const url = urlsArray[sourceIndex];
                             
-                            console.log(`[MAIN-DRAG] Reordering main widget: ${sourceIndex} -> ${targetIndex}`);
+                            // console.log(`[MAIN-DRAG] Reordering main widget: ${sourceIndex} -> ${targetIndex}`);
                             
                             // Remove from original position
                             launcherModel.removeUrl(sourceIndex);
@@ -252,9 +253,9 @@ PlasmoidItem {
                             // Update configuration
                             saveConfiguration();
                             
-                            console.log('[MAIN-DRAG] Main widget reordered');
+                            // console.log('[MAIN-DRAG] Main widget reordered');
                         } else {
-                            console.error(`[MAIN-DRAG] Invalid sourceIndex: ${sourceIndex}, count: ${launcherModel.count}`);
+                            // console.error(`[MAIN-DRAG] Invalid sourceIndex: ${sourceIndex}, count: ${launcherModel.count}`);
                         }
                     }
                     
@@ -262,7 +263,7 @@ PlasmoidItem {
                     if (!isFromPopup) {
                         internalDragActive = false;
                         internalDragSourceIndex = -1;
-                        console.log('[MAIN-DRAG] Reset main widget drag state');
+                        // console.log('[MAIN-DRAG] Reset main widget drag state');
                     }
                     
                     event.accept(Qt.IgnoreAction);
@@ -315,7 +316,7 @@ PlasmoidItem {
                 }
 
                 onFocusChanged: {
-                    console.log("[DEBUG] Main GridView focus changed to:", focus);
+                    // console.log("[DEBUG] Main GridView focus changed to:", focus);
                 }
 
                 model: ListModel {
@@ -406,12 +407,13 @@ PlasmoidItem {
                     
                     // Debug: Show detected Plasma theme properties (commented out for clean output)
                     /*
-                    console.log("[THEME] Plasma Background Color:", root.themeBackgroundColor);
-                    console.log("[THEME] Plasma Text Color:", root.themeTextColor);
-                    console.log("[THEME] Plasma Highlight Color:", root.themeHighlightColor);
-                    console.log("[THEME] Plasma Button Background:", root.themeButtonBackgroundColor);
-                    console.log("[THEME] Color Scheme:", root.themeColorScheme);
-                    console.log("[THEME] Dark Mode:", root.themeDarkMode);
+                    // Theme debug logging disabled
+                    // console.log("[THEME] Plasma Background Color:", root.themeBackgroundColor);
+                    // console.log("[THEME] Plasma Text Color:", root.themeTextColor);
+                    // console.log("[THEME] Plasma Highlight Color:", root.themeHighlightColor);
+                    // console.log("[THEME] Plasma Button Background:", root.themeButtonBackgroundColor);
+                    // console.log("[THEME] Color Scheme:", root.themeColorScheme);
+                    // console.log("[THEME] Dark Mode:", root.themeDarkMode);
                     */
                     
                     // Debug: Show Plasma Dialog SVG background information

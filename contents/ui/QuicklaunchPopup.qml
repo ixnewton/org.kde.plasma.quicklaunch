@@ -22,12 +22,13 @@ Item {
     property bool internalDragActive: false
     property int internalDragSourceIndex: -1
     
-    // Debug function for drag operations
+    // Debug function for drag operations (disabled)
     function logDragState(message) {
-        console.log(`[POPUP-DRAG] ${message} -`,
-                  `dragActive:${internalDragActive},`,
-                  `sourceIndex:${internalDragSourceIndex},`,
-                  `itemCount:${popupModel ? popupModel.count : 0}`);
+        // Debug logging disabled
+        // console.log(`[POPUP-DRAG] ${message} -`,
+        //           `dragActive:${internalDragActive},`,
+        //           `sourceIndex:${internalDragSourceIndex},`,
+        //           `itemCount:${popupModel ? popupModel.count : 0}`);
     }
 
     width: LayoutManager.popupItemWidth()
