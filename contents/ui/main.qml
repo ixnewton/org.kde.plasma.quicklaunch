@@ -386,7 +386,7 @@ PlasmoidItem {
                 PlasmaCore.ToolTipArea {
                     anchors.fill: parent
                     mainText: i18n("Quicklaunch")
-                    subText: i18nc("@info", "Add launchers by Drag and Drop or by using the context menu.")
+                    subText: i18nc("@info", "Add a launcher here. Drag and drop from your applications menu or by using the context menu.")
                     location: Plasmoid.location
                 }
             }
@@ -556,7 +556,8 @@ PlasmoidItem {
 
         PlasmaCore.ToolTipArea {
             id: popupArrow
-            visible: enablePopup
+            // Only show popup arrow if popup is enabled AND there are launcher URLs
+            visible: enablePopup && launcherModel.count > 0
             location: Plasmoid.location
 
             anchors {
@@ -565,7 +566,9 @@ PlasmoidItem {
                 bottom: parent.bottom
             }
 
-            subText: popup.visible ? i18n("Hide icons") : i18n("Show hidden icons")
+            subText: launcherModel.count > 0 ? 
+                (popup.visible ? i18n("Hide icons") : i18n("Show hidden icons")) : 
+                i18n("Add the first launcher to enable popup")
 
             MouseArea {
                 id: popupArrowMouseArea
@@ -573,8 +576,11 @@ PlasmoidItem {
                 hoverEnabled: true
                 
                 function togglePopup() {
-                    popup.visible = !popup.visible;
-                    // Position is handled automatically by PlasmaCore.Dialog
+                    // Only allow toggling popup if there are launcher URLs
+                    if (launcherModel.count > 0) {
+                        popup.visible = !popup.visible;
+                        // Position is handled automatically by PlasmaCore.Dialog
+                    }
                 }
                 
                 onClicked: togglePopup()

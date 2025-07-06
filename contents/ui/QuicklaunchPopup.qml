@@ -231,6 +231,20 @@ Item {
         focus: true
         interactive: true
         keyNavigationWraps: true
+        
+        // Empty state when no popup URLs exist
+        Kirigami.PlaceholderMessage {
+            anchors.centerIn: parent
+            width: parent.width - (Kirigami.Units.largeSpacing * 4)
+            visible: popupModel.count === 0
+            text: i18n("No hidden launchers")
+            helpfulAction: Kirigami.Action {
+                text: i18n("Add Launcher")
+                icon.name: "list-add"
+                onTriggered: logic.addLauncher(true)
+            }
+            explanation: i18n("Drag and drop launchers here from the main widget or add them using the context menu.")
+        }
 
         model: UrlModel {
             id: popupModel
