@@ -234,14 +234,10 @@ PlasmoidItem {
                                 popup.saveConfiguration();
                             }
                             
-<<<<<<< HEAD
-                            // console.log('[MAIN-DRAG] Item moved from popup to main widget');
-=======
                             // Ensure popup URLs are updated immediately
                             plasmoid.configuration.popupUrls = popup.popupModel.urls();
                             
                             console.log('[MAIN-DRAG] Item moved from popup to main widget');
->>>>>>> 70e8766 (fix: handle drag state cleanup and improve popup drag-and-drop reliability in quicklaunch widget)
                         }
                     } else {
                         // Handle internal reordering within main widget
