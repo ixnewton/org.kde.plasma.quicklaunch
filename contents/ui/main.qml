@@ -515,16 +515,63 @@ PlasmoidItem {
                 
                 var arrowGlobalX = root.mapToGlobal(popupArrow.x, 0).x;
                 var popupWidth = popup.width || 200; // Default width if not available
-                var centeredX = arrowGlobalX + (popupArrow.width / 2) - (popupWidth / 2);
-                var screenWidth = plasmoid.screenGeometry ? plasmoid.screenGeometry.width : 800; // Fallback width
-
-                if (centeredX < 8) {
-                    return 8;
-                } else if (centeredX + popupWidth > screenWidth - 8) {
-                    return screenWidth - popupWidth - 8;
-                } else {
-                    return centeredX;
+                // Get screen width from QtQuick.Screen with fallback
+                var screenWidth = 1920; // Default fallback width
+                if (typeof Qt !== 'undefined' && Qt.application && Qt.application.screens && Qt.application.screens.length > 0) {
+                    screenWidth = Qt.application.screens[0].width;
+                    console.log("Using screen width from QtQuick.Screen:", screenWidth);
                 }
+                
+                // Debug output for screen geometry using QtQuick.Screen
+                console.log("Screen Geometry Debug:");
+                console.log("plasmoid.screenGeometry:", JSON.stringify(plasmoid.screenGeometry));
+                
+                // Using QtQuick.Screen
+                if (typeof Qt !== 'undefined' && Qt.application && Qt.application.screens) {
+                    console.log("\nAvailable Screens:");
+//                    for (var i = 0; i < Qt.application.screens.length; i++) {
+//                        var screen = Qt.application.screens[i];
+//                        console.log(`Screen ${i}:`);
+//                        console.log(`- name: ${screen.name}`);
+//                        console.log(`- geometry: ${screen.width}x${screen.height}+${screen.virtualX}+${screen.virtualY}`);
+//                        console.log(`- availableGeometry: ${screen.availableWidth}x${screen.availableHeight}+${screen.availableVirtualX}+${screen.availableVirtualY}`);
+//                        console.log(`- devicePixelRatio: ${screen.devicePixelRatio}`);
+//                        console.log(`- primaryOrientation: ${screen.primaryOrientation}`);
+//                        console.log(`- orientation: ${screen.orientation}`);
+//                        console.log(`- virtualGeometry: ${screen.virtualX},${screen.virtualY} ${screen.width}x${screen.height}`);
+//                        console.log(`- virtualSize: ${screen.virtualWidth}x${screen.virtualHeight}`);
+//                    }
+                    
+                    // Get screen containing the widget
+                    var widgetScreen = Qt.application.screens[0]; // Default to first screen
+                    for (var j = 0; j < Qt.application.screens.length; j++) {
+                        var scr = Qt.application.screens[j];
+                        if (scr.virtualX <= arrowGlobalX && arrowGlobalX <= (scr.virtualX + scr.width) &&
+                            scr.virtualY <= 0 && 0 <= (scr.virtualY + scr.height)) {
+                            widgetScreen = scr;
+                            break;
+                        }
+                    }
+//                    console.log("\nWidget Screen:", widgetScreen.name);
+//                    console.log("- geometry:", widgetScreen.width, "x", widgetScreen.height, "+", widgetScreen.virtualX, "+", widgetScreen.virtualY);
+//                    console.log("- availableGeometry:", widgetScreen.availableWidth, "x", widgetScreen.availableHeight, "+", widgetScreen.availableVirtualX, "+", widgetScreen.availableVirtualY);
+                } else {
+//                    console.log("Qt.application.screens not available");
+                }
+                
+                var arrowCenterX = arrowGlobalX + (popupArrow.width / 2);
+                var centeredX = arrowCenterX - (popupWidth / 2);
+
+                // Check if popup would go off the left edge
+                if (arrowCenterX < popupWidth + 8) {
+                    return 8;
+                }
+                // Check if popup would go off the right edge
+                if (arrowCenterX + popupWidth + 8 > screenWidth) {
+                    return screenWidth - 8 - popupWidth;
+                }
+                // Otherwise center the popup relative to the arrow
+                return centeredX;
             }
             y: {
                 if (root.onTopOrBottomPanel) {
