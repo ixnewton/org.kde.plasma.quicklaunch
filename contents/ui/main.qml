@@ -386,7 +386,7 @@ PlasmoidItem {
                 PlasmaCore.ToolTipArea {
                     anchors.fill: parent
                     mainText: i18n("Quicklaunch")
-                    subText: i18nc("@info", "Add a launcher here. Drag and drop from your applications menu or by using the context menu.")
+                    subText: i18nc("@info", "Add a launcher here. Drag and drop from your applications menu or by using the context menu. Enable popup mode in configuration for popup menu.")
                     location: Plasmoid.location
                 }
             }
