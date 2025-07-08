@@ -6,7 +6,9 @@ This is a re-worked version of the current org.kde.plasma.quicklaunch widget. Th
 4) The offset of the popup matches the position and floating style to match a floating top bar.
 5) Fixing drag and drop functionality for adding external quicklinks from the Kicker menu or any folder. This was not working at all or only possible by dragging to the main header widget then with difficulty to the panel.
 6) Fixing drag reorder of items in the quicklinks list. This was not working well and created duplicate items.
-7) TBD: Dragging between popup list and the main widget is not ideal, resulting in orphaned selected coppies at the source.
+7) Dragging between popup list and the main widget is mostly fixed though dragging to the header icon position will leave a copy at the source. This can easy be deleted.
+8) Some adjustment of the popup position and width making it look better both on left/right/top-bar/bottom-bar postitions.
+9) Maybe add some trim parameters to the config for popup control?
 
 When it has been road tested I will try to have these improvments accepted by the official KDE repo.
 
