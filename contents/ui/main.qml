@@ -237,7 +237,7 @@ PlasmoidItem {
                             // Ensure popup URLs are updated immediately
                             plasmoid.configuration.popupUrls = popup.popupModel.urls();
                             
-                            console.log('[MAIN-DRAG] Item moved from popup to main widget');
+ //                           console.log('[MAIN-DRAG] Item moved from popup to main widget');
                         }
                     } else {
                         // Handle internal reordering within main widget
@@ -519,12 +519,12 @@ PlasmoidItem {
                 var screenWidth = 1920; // Default fallback width
                 if (typeof Qt !== 'undefined' && Qt.application && Qt.application.screens && Qt.application.screens.length > 0) {
                     screenWidth = Qt.application.screens[0].width;
-                    console.log("Using screen width from QtQuick.Screen:", screenWidth);
+//                    console.log("Using screen width from QtQuick.Screen:", screenWidth);
                 }
                 
                 // Debug output for screen geometry using QtQuick.Screen
-                console.log("Screen Geometry Debug:");
-                console.log("plasmoid.screenGeometry:", JSON.stringify(plasmoid.screenGeometry));
+//                console.log("Screen Geometry Debug:");
+//                console.log("plasmoid.screenGeometry:", JSON.stringify(plasmoid.screenGeometry));
                 
                 // Using QtQuick.Screen
                 if (typeof Qt !== 'undefined' && Qt.application && Qt.application.screens) {

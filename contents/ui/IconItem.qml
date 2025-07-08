@@ -173,12 +173,12 @@ Item {
                 if (popup.internalDragActive !== undefined) {
                     popup.internalDragActive = true;
                     popup.internalDragSourceIndex = iconItem.itemIndex;
-                    console.log("[DEBUG] Popup drag flags set - sourceIndex:", iconItem.itemIndex);
+//                    console.log("[DEBUG] Popup drag flags set - sourceIndex:", iconItem.itemIndex);
                     
                     // Connect to drag.active changes to clean up when drag ends
                     drag.activeChanged.connect(function() {
                         if (!drag.active) {
-                            console.log("[DEBUG] Popup drag ended - cleaning up state");
+//                            console.log("[DEBUG] Popup drag ended - cleaning up state");
                             popup.internalDragActive = false;
                             popup.internalDragSourceIndex = -1;
                             dragging = false;
@@ -194,19 +194,19 @@ Item {
                 if (rootWidget && rootWidget.internalDragActive !== undefined) {
                     rootWidget.internalDragActive = true;
                     rootWidget.internalDragSourceIndex = iconItem.itemIndex;
-                    console.log("[DEBUG] Main widget drag flags set - sourceIndex:", iconItem.itemIndex);
+//                    console.log("[DEBUG] Main widget drag flags set - sourceIndex:", iconItem.itemIndex);
                     
                     // Connect to drag.active changes to clean up when drag ends
                     drag.activeChanged.connect(function() {
                         if (!drag.active) {
-                            console.log("[DEBUG] Main widget drag ended - cleaning up state");
+//                            console.log("[DEBUG] Main widget drag ended - cleaning up state");
                             rootWidget.internalDragActive = false;
                             rootWidget.internalDragSourceIndex = -1;
                             dragging = false;
                         }
                     });
                 } else {
-                    console.log("[DEBUG] Could not find root widget for main item drag");
+//                    console.log("[DEBUG] Could not find root widget for main item drag");
                 }
             }
             
@@ -336,7 +336,7 @@ Item {
                     text: i18nc("@action:inmenu", "Edit Launcher…")
                     icon: "document-edit"
                     onClicked: {
-                        console.log("[DEBUG] IconItem", itemIndex, "Edit Launcher clicked");
+//                        console.log("[DEBUG] IconItem", itemIndex, "Edit Launcher clicked");
                         editLauncher();
                     }
                 }

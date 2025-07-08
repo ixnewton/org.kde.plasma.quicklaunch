@@ -68,11 +68,11 @@ Item {
         
         // Debug: Log the background approach being used
         Component.onCompleted: {
-            console.log("[THEME] Using translucent dialog-style Rectangle background");
-            console.log("[THEME] Mimicking: translucent/dialogs/background.svgz appearance");
-            console.log("[THEME] Background color:", color);
-            console.log("[THEME] Opacity:", opacity);
-            console.log("[THEME] Radius:", radius);
+//            console.log("[THEME] Using translucent dialog-style Rectangle background");
+//            console.log("[THEME] Mimicking: translucent/dialogs/background.svgz appearance");
+//            console.log("[THEME] Background color:", color);
+//            console.log("[THEME] Opacity:", opacity);
+//            console.log("[THEME] Radius:", radius);
         }
     }
 
@@ -147,7 +147,7 @@ Item {
                     const mainUrls = mainWidget.launcherModel.urls();
                     const url = mainUrls[sourceIndex];
                     
-                    console.log(`[POPUP-DRAG] Moving item from main[${sourceIndex}] to popup[${targetIndex}]: ${url}`);
+//                    console.log(`[POPUP-DRAG] Moving item from main[${sourceIndex}] to popup[${targetIndex}]: ${url}`);
                     
                     // Add to popup
                     popupModel.insertUrl(targetIndex, url);
@@ -161,7 +161,7 @@ Item {
                         mainWidget.saveConfiguration();
                     }
                     
-                    console.log('[POPUP-DRAG] Item moved from main to popup');
+//                    console.log('[POPUP-DRAG] Item moved from main to popup');
                 }
                 
                 event.accept(Qt.IgnoreAction);
@@ -196,7 +196,7 @@ Item {
                     // Save configuration
                     saveConfiguration();
                     
-                    console.log('[POPUP-DRAG] Popup reordered');
+//                    console.log('[POPUP-DRAG] Popup reordered');
                 }
                 
                 // Reset internal drag flags
@@ -206,7 +206,7 @@ Item {
                 event.accept(Qt.IgnoreAction);
             } else if (event.mimeData.hasUrls) {
                 // Handle external URL drop
-                console.log("[POPUP-DRAG] Processing external URL drop");
+//                console.log("[POPUP-DRAG] Processing external URL drop");
                 const index = listView.indexAt(event.x, event.y);
                 const targetIndex = index === -1 ? popupModel.count : index;
                 
@@ -216,9 +216,9 @@ Item {
                 // Save configuration
                 saveConfiguration();
                 
-                console.log(`[POPUP-DRAG] URLs inserted at ${targetIndex}, new count:`, popupModel.count);
+//                console.log(`[POPUP-DRAG] URLs inserted at ${targetIndex}, new count:`, popupModel.count);
             } else {
-                console.log("[POPUP-DRAG] Drop event not handled - no URLs or unrecognized format");
+//                console.log("[POPUP-DRAG] Drop event not handled - no URLs or unrecognized format");
                 event.ignore();
             }
         }
