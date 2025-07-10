@@ -150,10 +150,6 @@ Item {
         // Debug property to track drag state
         property bool isDragging: false
         
-        function logState(message) {
-            console.log(`[DRAG-DEBUG] ${message} - ${isPopupItem ? 'Popup' : 'Main'} item ${itemIndex}:`,
-                      `dragging:${isDragging}, active:${drag.active}, source:${drag.source ? 'set' : 'null'}`);
-        }
         defaultAction: Qt.MoveAction
         supportedActions: Qt.IgnoreAction | Qt.MoveAction
         delegate: icon
