@@ -487,13 +487,13 @@ PlasmoidItem {
 
                 // Check if popup would go off the left edge
                 if (arrowCenterX < popupWidth + 8) {
-                    return 8;
+                    return 10; // Add 2px offset to left edge
                 }
                 // Check if popup would go off the right edge
                 if (arrowCenterX + popupWidth + 8 > screenWidth) {
-                    return screenWidth - 8 - popupWidth;
+                    return screenWidth - 10 - popupWidth; // Add 2px offset to left edge
                 }
-                // Otherwise center the popup relative to the arrow
+                // Otherwise center the popup relative to the arrow with 2px offset
                 return centeredX;
             }
             y: {
