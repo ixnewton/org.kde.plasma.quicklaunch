@@ -79,10 +79,10 @@ PlasmoidItem {
             if (root.onTopOrBottomPanel) {
                 if (plasmoid.location == PlasmaCore.Types.TopEdge) {
                     // Position below the panel, reduce top offset to 9px
-                    return root.mapToGlobal(0, root.height).y + 18;
+                    return root.mapToGlobal(0, root.height).y + 17;
                 } else { // BottomEdge
                     // Position above the panel, reduce top offset to 9px
-                    return root.mapToGlobal(0, 0).y - popup.height + 8;
+                    return root.mapToGlobal(0, 0).y - popup.height + 17;
                 }
             }
 
