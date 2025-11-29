@@ -18,6 +18,7 @@ KCM.SimpleKCM {
     property alias cfg_maxSectionCount: maxSectionCount.value
     property alias cfg_showLauncherNames: showLauncherNames.checked
     property alias cfg_enablePopup: enablePopup.checked
+    property alias cfg_openOnMouseOver: openOnMouseOver.checked
     property alias cfg_title: title.text
 
     Kirigami.FormLayout {
@@ -44,6 +45,12 @@ KCM.SimpleKCM {
         QQC2.CheckBox {
             id: enablePopup
             text: i18nc("@option:check", "Enable popup")
+        }
+
+        QQC2.CheckBox {
+            id: openOnMouseOver
+            text: i18nc("@option:check", "Open with mouse-over")
+            enabled: enablePopup.checked
         }
 
 

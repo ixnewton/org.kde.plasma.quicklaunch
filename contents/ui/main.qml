@@ -21,6 +21,7 @@ PlasmoidItem {
     readonly property int maxSectionCount: plasmoid.configuration.maxSectionCount
     readonly property bool showLauncherNames : plasmoid.configuration.showLauncherNames
     readonly property bool enablePopup : plasmoid.configuration.enablePopup
+    readonly property bool openOnMouseOver : plasmoid.configuration.openOnMouseOver
     readonly property string title : plasmoid.formFactor == PlasmaCore.Types.Planar ? plasmoid.configuration.title : ""
     readonly property bool onLeftOrRightPanel: plasmoid.location === PlasmaCore.Types.LeftEdge || plasmoid.location === PlasmaCore.Types.RightEdge
     property bool vertical: plasmoid.formFactor == PlasmaCore.Types.Vertical || (plasmoid.formFactor == PlasmaCore.Types.Planar && plasmoid.height > plasmoid.width)
@@ -47,6 +48,24 @@ PlasmoidItem {
         repeat: false
         onTriggered: {
             suspendPopupClosing = false;
+        }
+    }
+    
+    // Timer for mouse-over popup opening
+    Timer {
+        id: mouseOverTimer
+        interval: 0  // No delay - popup opens immediately on mouse-over
+        repeat: false
+        onTriggered: {
+            console.log("[MOUSE-OVER DEBUG] Timer triggered");
+            console.log("[MOUSE-OVER DEBUG] openOnMouseOver:", openOnMouseOver);
+            console.log("[MOUSE-OVER DEBUG] launcherModel.count:", launcherModel.count);
+            if (openOnMouseOver && launcherModel.count > 0) {
+                console.log("[MOUSE-OVER DEBUG] Opening popup");
+                popup.visible = true;
+            } else {
+                console.log("[MOUSE-OVER DEBUG] Not opening popup - conditions not met");
+            }
         }
     }
     
@@ -89,6 +108,8 @@ PlasmoidItem {
                 
                 if (isInternal || event.mimeData.hasUrls || root.childAt(event.x, event.y) == popupArrow) {
                     dragging = true;
+                    // Stop mouse-over timer during drag operations
+                    mouseOverTimer.stop();
                     // Start 3-second timer to lock popup open
                     suspendPopupClosing = true;
                     popupLockTimer.restart();
@@ -554,6 +575,27 @@ PlasmoidItem {
                 }
                 
                 onClicked: togglePopup()
+                
+                onEntered: {
+                    // Debug logging
+                    console.log("[MOUSE-OVER DEBUG] onEntered triggered");
+                    console.log("[MOUSE-OVER DEBUG] openOnMouseOver:", openOnMouseOver);
+                    console.log("[MOUSE-OVER DEBUG] popup.visible:", popup.visible);
+                    console.log("[MOUSE-OVER DEBUG] launcherModel.count:", launcherModel.count);
+                    
+                    // Start mouse-over timer if enabled and popup is not already visible
+                    if (openOnMouseOver && !popup.visible) {
+                        console.log("[MOUSE-OVER DEBUG] Starting mouseOverTimer");
+                        mouseOverTimer.start();
+                    } else {
+                        console.log("[MOUSE-OVER DEBUG] Not starting timer - conditions not met");
+                    }
+                }
+                
+                onExited: {
+                    // Stop the mouse-over timer when mouse leaves
+                    mouseOverTimer.stop();
+                }
                 
                 Keys.onPressed: {
                     switch (event.key) {
