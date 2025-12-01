@@ -54,7 +54,7 @@ PlasmoidItem {
     // Timer for mouse-over popup opening
     Timer {
         id: mouseOverTimer
-        interval: 0  // No delay - popup opens immediately on mouse-over
+        interval: 250  // 250ms delay - popup opens after mouse-over delay
         repeat: false
         onTriggered: {
             console.log("[MOUSE-OVER DEBUG] Timer triggered");
