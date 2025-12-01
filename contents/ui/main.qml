@@ -435,8 +435,8 @@ PlasmoidItem {
                 }
             }
             
-            // Connect popup to panel widget for proper autohide synchronization
-            visualParent: popupArrow
+            // visualParent removed to allow manual positioning control
+            // visualParent: popupArrow
             
             // Position is handled automatically by PlasmaCore.Dialog
             // No manual positioning needed
@@ -448,12 +448,12 @@ PlasmoidItem {
                 if (root.onLeftOrRightPanel) {
                     if (plasmoid.location == PlasmaCore.Types.LeftEdge) {
                         // Position right of the panel, with an 8px offset, aligned with panel edge
-                        return root.mapToGlobal(root.width, 0).x + 8;
+                        return root.mapToGlobal(root.width, 0).x + 10;
                     } else { // RightEdge
                         // Position left of the panel, with an 8px offset, aligned with panel edge
                         // Use a default width if popup.width is not available yet
-                        var popupWidth = (popup && popup.width) ? popup.width : 200; // Default width if not available
-                        return root.mapToGlobal(0, 0).x - popupWidth - 8;
+                        var popupWidth = (popup && popup.width) ? popup.width : 200; // No container margins needed
+                        return root.mapToGlobal(0, 0).x - popupWidth - 10;
                     }
                 }
                 
@@ -461,7 +461,7 @@ PlasmoidItem {
                 if (!popupArrow || !popupArrow.width) return 0;
                 
                 var arrowGlobalX = root.mapToGlobal(popupArrow.x, 0).x;
-                var popupWidth = popup.width || 200; // Default width if not available
+                var popupWidth = popup.width || 200; // No container margins needed
                 // Get screen width from QtQuick.Screen with fallback
                 var screenWidth = 1920; // Default fallback width
                 if (typeof Qt !== 'undefined' && Qt.application && Qt.application.screens && Qt.application.screens.length > 0) {
@@ -506,28 +506,45 @@ PlasmoidItem {
 //                    console.log("Qt.application.screens not available");
                 }
                 
-                var arrowCenterX = arrowGlobalX + (popupArrow.width / 2);
-                var centeredX = arrowCenterX - (popupWidth / 2);
-
-                // Check if popup would go off the left edge
-                if (arrowCenterX < popupWidth + 8) {
-                    return 8; // Add 8px offset to left edge
+                // Edge-aligned positioning based on widget position and available space
+                var widgetLeftX = root.mapToGlobal(0, 0).x;
+                var widgetRightX = root.mapToGlobal(root.width, 0).x;
+                var widgetCenterX = root.mapToGlobal(root.width / 2, 0).x;
+                var screenHalf = screenWidth / 2;
+                
+                                
+                if (widgetCenterX < screenHalf) {
+                    // Left-positioned widget logic
+                    if (widgetRightX > popupWidth + 10) {
+                        // Align right widget edge with right menu edge
+                        var edgeAlignedPos = widgetRightX - popupWidth;
+                        return edgeAlignedPos;
+                    } else {
+                        // Fall back to left screen edge alignment
+                        var leftPos = 10;
+                        return leftPos;
+                    }
+                } else {
+                    // Right-positioned widget logic
+                    if (screenWidth - widgetLeftX > popupWidth + 10) {
+                        // Align left menu edge with left widget edge
+                        var edgeAlignedPos = widgetLeftX;
+                        return edgeAlignedPos;
+                    } else {
+                        // Fall back to right screen edge alignment
+                        var rightPos = screenWidth - 10 - popupWidth;
+                        return rightPos;
+                    }
                 }
-                // Check if popup would go off the right edge
-                if (arrowCenterX + popupWidth + 8 > screenWidth) {
-                    return screenWidth - 8 - popupWidth; // Add 8px offset to left edge
-                }
-                // Otherwise center the popup relative to the arrow with 2px offset
-                return centeredX;
             }
             y: {
                 if (root.onTopOrBottomPanel) {
                     if (plasmoid.location == PlasmaCore.Types.TopEdge) {
-                        // Position below the panel, accounting for panel height and 8px offset
-                        return root.mapToGlobal(0, root.height).y + plasmoid.configuration.popupVerticalOffset + 8;
+                        // Position below the panel, account for 8px top spacing
+                        return root.mapToGlobal(0, root.height).y + plasmoid.configuration.popupVerticalOffset + 10;
                     } else { // BottomEdge
-                        // Position above the panel, accounting for panel height, popup height and 8px offset
-                        return root.mapToGlobal(0, 0).y - popup.height - plasmoid.configuration.popupVerticalOffset - 8;
+                        // Position above the panel, margins handle the offset
+                        return root.mapToGlobal(0, 0).y - popup.height - plasmoid.configuration.popupVerticalOffset;
                     }
                 }
 
@@ -538,11 +555,23 @@ PlasmoidItem {
             mainItem: Item {
                 id: popupContainer
                 width: popupContent.width
-                height: popupContent.height
+                height: popupContent.height + 10  // Add 10px for top spacing, no height cap
+
+                // Top spacing rectangle (transparent)
+                Rectangle {
+                    id: topSpacing
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 10
+                    color: "transparent"
+                }
 
                 Popup {
                     id: popupContent
-                    anchors.centerIn: parent
+                    anchors.top: topSpacing.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
                     Keys.onEscapePressed: popup.visible = false
                 }
             }

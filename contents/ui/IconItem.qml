@@ -216,7 +216,7 @@ Item {
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton  // Only left button for normal interaction
 
-            activeFocusOnTab: true
+            activeFocusOnTab: false  // Don't steal focus from popup dialog
             Accessible.name: iconItem.launcher.applicationName
             Accessible.description: i18n("Launch %1", iconItem.launcher.genericName || iconItem.launcher.applicationName)
             Accessible.role: Accessible.Button

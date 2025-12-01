@@ -228,7 +228,7 @@ Item {
         id: listView
         anchors.fill: parent
 
-        focus: true
+        focus: false  // Don't steal focus from popup dialog
         interactive: true
         keyNavigationWraps: true
         
