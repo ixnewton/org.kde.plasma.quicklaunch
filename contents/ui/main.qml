@@ -435,6 +435,9 @@ PlasmoidItem {
                 }
             }
             
+            // Connect popup to panel widget for proper autohide synchronization
+            visualParent: popupArrow
+            
             // Position is handled automatically by PlasmaCore.Dialog
             // No manual positioning needed
             // Manual positioning is required to apply a pixel offset.
@@ -444,13 +447,13 @@ PlasmoidItem {
                 
                 if (root.onLeftOrRightPanel) {
                     if (plasmoid.location == PlasmaCore.Types.LeftEdge) {
-                        // Position right of the panel, with a 10px margin
-                        return root.mapToGlobal(root.width, 0).x + 10;
+                        // Position right of the panel, with an 8px offset, aligned with panel edge
+                        return root.mapToGlobal(root.width, 0).x + 8;
                     } else { // RightEdge
-                        // Position left of the panel, with a 10px margin
+                        // Position left of the panel, with an 8px offset, aligned with panel edge
                         // Use a default width if popup.width is not available yet
                         var popupWidth = (popup && popup.width) ? popup.width : 200; // Default width if not available
-                        return root.mapToGlobal(0, 0).x - popupWidth - 10;
+                        return root.mapToGlobal(0, 0).x - popupWidth - 8;
                     }
                 }
                 
@@ -508,11 +511,11 @@ PlasmoidItem {
 
                 // Check if popup would go off the left edge
                 if (arrowCenterX < popupWidth + 8) {
-                    return 10; // Add 2px offset to left edge
+                    return 8; // Add 8px offset to left edge
                 }
                 // Check if popup would go off the right edge
                 if (arrowCenterX + popupWidth + 8 > screenWidth) {
-                    return screenWidth - 10 - popupWidth; // Add 2px offset to left edge
+                    return screenWidth - 8 - popupWidth; // Add 8px offset to left edge
                 }
                 // Otherwise center the popup relative to the arrow with 2px offset
                 return centeredX;
@@ -520,11 +523,11 @@ PlasmoidItem {
             y: {
                 if (root.onTopOrBottomPanel) {
                     if (plasmoid.location == PlasmaCore.Types.TopEdge) {
-                        // Position below the panel, accounting for panel height and margin
-                        return root.mapToGlobal(0, root.height).y + plasmoid.configuration.popupVerticalOffset + 9;
+                        // Position below the panel, accounting for panel height and 8px offset
+                        return root.mapToGlobal(0, root.height).y + plasmoid.configuration.popupVerticalOffset + 8;
                     } else { // BottomEdge
-                        // Position above the panel, accounting for panel height, popup height and margin
-                        return root.mapToGlobal(0, 0).y - popup.height - plasmoid.configuration.popupVerticalOffset -1;
+                        // Position above the panel, accounting for panel height, popup height and 8px offset
+                        return root.mapToGlobal(0, 0).y - popup.height - plasmoid.configuration.popupVerticalOffset - 8;
                     }
                 }
 
