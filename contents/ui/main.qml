@@ -540,7 +540,7 @@ PlasmoidItem {
             y: {
                 if (root.onTopOrBottomPanel) {
                     if (plasmoid.location == PlasmaCore.Types.TopEdge) {
-                        // Position below the panel, account for 8px top spacing
+                        // Position below the panel with 10px offset
                         return root.mapToGlobal(0, root.height).y + plasmoid.configuration.popupVerticalOffset + 10;
                     } else { // BottomEdge
                         // Position above the panel, margins handle the offset
@@ -552,28 +552,9 @@ PlasmoidItem {
                 return root.mapToGlobal(0, vertical ? (popupArrow.y - height) : 0).y;
             }
 
-            mainItem: Item {
-                id: popupContainer
-                width: popupContent.width
-                height: popupContent.height + 10  // Add 10px for top spacing, no height cap
-
-                // Top spacing rectangle (transparent)
-                Rectangle {
-                    id: topSpacing
-                    anchors.top: parent.top
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    height: 10
-                    color: "transparent"
-                }
-
-                Popup {
-                    id: popupContent
-                    anchors.top: topSpacing.bottom
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    Keys.onEscapePressed: popup.visible = false
-                }
+            mainItem: Popup {
+                id: popupContent
+                Keys.onEscapePressed: popup.visible = false
             }
         }
 
