@@ -513,29 +513,11 @@ PlasmoidItem {
                 var screenHalf = screenWidth / 2;
                 
                                 
-                if (widgetCenterX < screenHalf) {
-                    // Left-positioned widget logic
-                    if (widgetRightX > popupWidth + 10) {
-                        // Align right widget edge with right menu edge
-                        var edgeAlignedPos = widgetRightX - popupWidth;
-                        return edgeAlignedPos;
-                    } else {
-                        // Fall back to left screen edge alignment
-                        var leftPos = 10;
-                        return leftPos;
-                    }
-                } else {
-                    // Right-positioned widget logic
-                    if (screenWidth - widgetLeftX > popupWidth + 10) {
-                        // Align left menu edge with left widget edge
-                        var edgeAlignedPos = widgetLeftX;
-                        return edgeAlignedPos;
-                    } else {
-                        // Fall back to right screen edge alignment
-                        var rightPos = screenWidth - 10 - popupWidth;
-                        return rightPos;
-                    }
-                }
+                // Center menu on the down arrow
+                var arrowGlobalX = root.mapToGlobal(popupArrow.x, 0).x;
+                var arrowCenterX = arrowGlobalX + (popupArrow.width / 2);
+                var centeredPos = arrowCenterX - (popupWidth / 2);
+                return centeredPos;
             }
             y: {
                 if (root.onTopOrBottomPanel) {
