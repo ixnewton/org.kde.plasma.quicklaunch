@@ -54,7 +54,7 @@ PlasmoidItem {
     // Timer for mouse-over popup opening
     Timer {
         id: mouseOverTimer
-        interval: 250  // 250ms delay - popup opens after mouse-over delay
+        interval: 0  // No delay - popup opens immediately on mouse-over
         repeat: false
         onTriggered: {
             console.log("[MOUSE-OVER DEBUG] Timer triggered");
@@ -63,11 +63,16 @@ PlasmoidItem {
             if (openOnMouseOver && launcherModel.count > 0) {
                 console.log("[MOUSE-OVER DEBUG] Opening popup");
                 popup.visible = true;
+                plasmoid.status = PlasmaCore.Types.ActiveStatus;
             } else {
                 console.log("[MOUSE-OVER DEBUG] Not opening popup - conditions not met");
             }
         }
     }
+    
+    // Note: Continuous hover tracking across separate windows (popup vs main widget) 
+    // is fundamentally limited in Qt/Plasma. The popup captures mouse events,
+    // preventing real-time hover updates on the main widget.
     
     // Internal drag tracking (same as popup)
     property bool internalDragActive: false
@@ -207,6 +212,7 @@ PlasmoidItem {
                     
                     // Show popup after dropping external URLs if not already visible
                     if (!popup.visible) {
+                        plasmoid.status = PlasmaCore.Types.ActiveStatus;
                         popup.visible = true;
                     }
                     
@@ -391,6 +397,7 @@ PlasmoidItem {
                         return;
                     }
 
+                    plasmoid.status = PlasmaCore.Types.ActiveStatus;
                     popup.visible = true;
                     popup.mainItem.popupModel.insertUrl(popup.mainItem.popupModel.count, url);
                     popup.mainItem.listView.currentIndex = popup.mainItem.popupModel.count - 1;
@@ -423,6 +430,13 @@ PlasmoidItem {
             onActiveChanged: {
                 if (!active && !dragging) {
                     suspendPopupClosing = false;
+                }
+            }
+            
+            // Reset plasmoid status when popup closes through any mechanism
+            onVisibleChanged: {
+                if (!visible) {
+                    plasmoid.status = PlasmaCore.Types.PassiveStatus;
                 }
             }
             
@@ -582,6 +596,12 @@ PlasmoidItem {
                 function togglePopup() {
                     // Only allow toggling popup if there are launcher URLs
                     if (launcherModel.count > 0) {
+                        // Set plasmoid status to prevent panel autohide before changing visibility
+                        if (!popup.visible) {
+                            plasmoid.status = PlasmaCore.Types.ActiveStatus;
+                        } else {
+                            plasmoid.status = PlasmaCore.Types.PassiveStatus;
+                        }
                         popup.visible = !popup.visible;
                         // Position is handled automatically by PlasmaCore.Dialog
                     }
@@ -626,6 +646,7 @@ PlasmoidItem {
                 Kirigami.Icon {
                     anchors.fill: parent
 
+                    active: popupArrowMouseArea.containsMouse || popup.visible
                     rotation: popup.visible ? 180 : 0
                     Behavior on rotation {
                         RotationAnimation {
