@@ -23,6 +23,13 @@ Item {
     property bool internalDragActive: false
     property int internalDragSourceIndex: -1
 
+    // True while the mouse is over the popup menu
+    property alias containsMouse: popupHoverHandler.hovered
+
+    HoverHandler {
+        id: popupHoverHandler
+    }
+
     width: LayoutManager.popupItemWidth()
     height: Math.max(1, popupModel.count) * LayoutManager.popupItemHeight()
     

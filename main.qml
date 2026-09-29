@@ -63,6 +63,39 @@ PlasmoidItem {
             }
         }
     }
+
+    // Auto-close: close the popup 2 seconds after the mouse stops hovering
+    // the popup menu (hovering the widget itself also keeps it open)
+    readonly property bool mouseOverPopup: popupContent.containsMouse
+    readonly property bool mouseOverApplet: widgetHoverHandler.hovered
+    // Any drag or reorder operation suspends the auto-close
+    readonly property bool dragInProgress: dragging || internalDragActive
+        || popupContent.internalDragActive
+
+    Timer {
+        id: popupCloseTimer
+        interval: 2000  // 2 seconds
+        repeat: false
+        onTriggered: {
+            if (popup.visible && !suspendPopupClosing && !dragInProgress) {
+                popup.visible = false;
+            }
+        }
+    }
+
+    function updatePopupCloseTimer() {
+        if (popup.visible && !suspendPopupClosing && !dragInProgress
+                && !mouseOverPopup && !mouseOverApplet) {
+            popupCloseTimer.restart();
+        } else {
+            popupCloseTimer.stop();
+        }
+    }
+
+    onMouseOverPopupChanged: updatePopupCloseTimer()
+    onMouseOverAppletChanged: updatePopupCloseTimer()
+    onSuspendPopupClosingChanged: updatePopupCloseTimer()
+    onDragInProgressChanged: updatePopupCloseTimer()
     
     // Note: Continuous hover tracking across separate windows (popup vs main widget) 
     // is fundamentally limited in Qt/Plasma. The popup captures mouse events,
@@ -93,6 +126,11 @@ PlasmoidItem {
 
     Item {
         anchors.fill: parent
+
+        // Hover tracking for the main widget area
+        HoverHandler {
+            id: widgetHoverHandler
+        }
 
         DragAndDrop.DropArea {
             anchors.fill: parent
@@ -158,9 +196,10 @@ PlasmoidItem {
             }
 
             onDragLeave: function(event) {
-                // Don't reset dragging state on drag leave - let timer handle it
-                // This prevents popup from closing when moving between main area and popup
                 launcherModel.clearDropMarker();
+                // The drag has left the main widget; the popup stays locked by
+                // suspendPopupClosing/popupLockTimer until the drag ends
+                dragging = false;
             }
 
             onDrop: function(event) {
@@ -432,6 +471,7 @@ PlasmoidItem {
                 if (!visible) {
                     Plasmoid.status = PlasmaCore.Types.PassiveStatus;
                 }
+                updatePopupCloseTimer();
             }
             
             location: {
