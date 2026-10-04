@@ -22,6 +22,7 @@ Item {
     property alias listView: listView
     property bool internalDragActive: false
     property int internalDragSourceIndex: -1
+    property bool contextMenuOpen: false
 
     // True while the mouse is over the popup menu
     property alias containsMouse: popupHoverHandler.hovered

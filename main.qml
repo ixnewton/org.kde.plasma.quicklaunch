@@ -40,6 +40,7 @@ PlasmoidItem {
     // Note: Direct SVG access not available, using Dialog properties instead
     property bool dragging : false
     property bool suspendPopupClosing: false
+    property bool contextMenuOpen: false
     
     // Timer to lock popup open for 3 seconds during drag operations
     Timer {
@@ -71,20 +72,23 @@ PlasmoidItem {
     // Any drag or reorder operation suspends the auto-close
     readonly property bool dragInProgress: dragging || internalDragActive
         || popupContent.internalDragActive
+    // So does an open context menu on any launcher item
+    readonly property bool popupCloseSuspended: suspendPopupClosing || dragInProgress
+        || contextMenuOpen || popupContent.contextMenuOpen
 
     Timer {
         id: popupCloseTimer
         interval: 2000  // 2 seconds
         repeat: false
         onTriggered: {
-            if (popup.visible && !suspendPopupClosing && !dragInProgress) {
+            if (popup.visible && !popupCloseSuspended) {
                 popup.visible = false;
             }
         }
     }
 
     function updatePopupCloseTimer() {
-        if (popup.visible && !suspendPopupClosing && !dragInProgress
+        if (popup.visible && !popupCloseSuspended
                 && !mouseOverPopup && !mouseOverApplet) {
             popupCloseTimer.restart();
         } else {
@@ -94,8 +98,7 @@ PlasmoidItem {
 
     onMouseOverPopupChanged: updatePopupCloseTimer()
     onMouseOverAppletChanged: updatePopupCloseTimer()
-    onSuspendPopupClosingChanged: updatePopupCloseTimer()
-    onDragInProgressChanged: updatePopupCloseTimer()
+    onPopupCloseSuspendedChanged: updatePopupCloseTimer()
     
     // Note: Continuous hover tracking across separate windows (popup vs main widget) 
     // is fundamentally limited in Qt/Plasma. The popup captures mouse events,
@@ -470,6 +473,9 @@ PlasmoidItem {
             onVisibleChanged: {
                 if (!visible) {
                     Plasmoid.status = PlasmaCore.Types.PassiveStatus;
+                    // Clear any stale context-menu flag so auto-close re-arms
+                    contextMenuOpen = false;
+                    popupContent.contextMenuOpen = false;
                 }
                 updatePopupCloseTimer();
             }

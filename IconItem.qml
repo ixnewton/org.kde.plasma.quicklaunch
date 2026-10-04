@@ -318,6 +318,10 @@ Item {
 
                 visualParent: mouseArea
 
+                // Keep the popup auto-close suspended while the menu is open
+                onStatusChanged: iconItem.setContextMenuOpen(status === PlasmaExtras.Menu.Open)
+                Component.onDestruction: iconItem.setContextMenuOpen(false)
+
                 PlasmaExtras.MenuItem {
                     id: jumpListSeparator
                     separator: true
@@ -466,6 +470,26 @@ Item {
             }
         }
     ]
+
+    // Marks the owning root (main widget or popup) while the context menu is
+    // open so the popup auto-close stays suspended
+    function setContextMenuOpen(open)
+    {
+        if (iconItem.isPopupItem) {
+            var popupRoot = iconItem.ListView.view ? iconItem.ListView.view.parent : null;
+            if (popupRoot && popupRoot.contextMenuOpen !== undefined) {
+                popupRoot.contextMenuOpen = open;
+            }
+        } else {
+            var rootWidget = iconItem.GridView.view;
+            while (rootWidget && rootWidget.internalDragActive === undefined) {
+                rootWidget = rootWidget.parent;
+            }
+            if (rootWidget && rootWidget.contextMenuOpen !== undefined) {
+                rootWidget.contextMenuOpen = open;
+            }
+        }
+    }
 
     function addLauncher()
     {
