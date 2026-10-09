@@ -52,10 +52,11 @@ PlasmoidItem {
         }
     }
     
-    // Timer for mouse-over popup opening
+    // Timer for mouse-over popup opening (500ms hover delay so the mouse
+    // moving over/past the arrow does not open the menu immediately)
     Timer {
         id: mouseOverTimer
-        interval: 0  // No delay - popup opens immediately on mouse-over
+        interval: 500  // 500ms - mouse must stay on the arrow
         repeat: false
         onTriggered: {
             if (openOnMouseOver && launcherModel.count > 0) {
@@ -646,7 +647,12 @@ PlasmoidItem {
                     }
                 }
                 
-                onClicked: togglePopup()
+                onClicked: {
+                    // A click opens/closes immediately; cancel the pending
+                    // hover-open so it cannot re-open a just-closed popup
+                    mouseOverTimer.stop();
+                    togglePopup();
+                }
                 
                 onEntered: {
                     if (openOnMouseOver && !popup.visible) {
